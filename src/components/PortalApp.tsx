@@ -216,7 +216,7 @@ export default function PortalApp() {
   ];
 
   return (
-    <div className="min-h-screen md:h-screen w-full bg-slate-50 flex flex-col md:flex-row md:overflow-hidden">
+    <div className="min-h-screen w-full bg-slate-50 flex flex-col">
       {/* Mobile Top App Bar (shown only on < md screens) */}
       <div className="md:hidden bg-slate-950 text-white px-4 py-3 flex items-center justify-between border-b border-slate-800 shrink-0 sticky top-0 z-40">
         <div className="flex items-center gap-2.5">
@@ -245,12 +245,12 @@ export default function PortalApp() {
         />
       )}
 
-      {/* Left Sidebar - Fixed height to viewport on desktop, zero window scrolling needed */}
+      {/* Left Sidebar - FIXED to viewport on desktop, physically impossible to scroll or stretch */}
       <aside
-        className={`w-full md:w-64 bg-slate-950 text-slate-200 flex flex-col justify-between shrink-0 border-r border-slate-800/80 z-50 md:z-40 transition-all duration-200 ${
+        className={`w-full md:w-64 bg-slate-950 text-slate-200 flex flex-col justify-between shrink-0 border-r border-slate-800/80 z-40 transition-all duration-200 ${
           mobileMenuOpen
-            ? "fixed inset-y-0 left-0 w-72 max-w-[85vw] flex h-full"
-            : "hidden md:flex md:h-screen md:sticky md:top-0"
+            ? "fixed inset-y-0 left-0 w-72 max-w-[85vw] flex h-full z-50 shadow-2xl"
+            : "hidden md:flex md:fixed md:inset-y-0 md:left-0 md:w-64 md:h-screen md:max-h-screen"
         }`}
       >
         <div className="flex flex-col min-h-0 flex-1">
@@ -301,7 +301,7 @@ export default function PortalApp() {
         </div>
 
         {/* Logged-in User Card - permanently pinned to the bottom of the screen */}
-        <div className="p-4 border-t border-slate-800/80 space-y-2.5 shrink-0 bg-slate-950">
+        <div className="p-3.5 border-t border-slate-800/80 space-y-2 shrink-0 bg-slate-950">
           <button
             onClick={() => {
               setProfileOpen(true);
@@ -323,7 +323,7 @@ export default function PortalApp() {
                 {ROLE_META[user.role].label}
               </p>
             </div>
-            <ShieldCheck className="w-4 h-4 text-slate-500 group-hover:text-indigo-400" />
+            <ShieldCheck className="w-4 h-4 text-slate-500 group-hover:text-indigo-400 shrink-0" />
           </button>
 
           <button
@@ -336,11 +336,11 @@ export default function PortalApp() {
         </div>
       </aside>
 
-      {/* Main Content Area - scrolls independently on desktop */}
-      <div className="flex-1 flex flex-col min-w-0 md:h-screen md:overflow-y-auto">
+      {/* Main Content Area - with left padding on desktop for fixed sidebar */}
+      <div className="flex-1 flex flex-col min-w-0 md:pl-64 min-h-screen">
         {/* Top Header Bar */}
-        <header className="bg-white border-b border-slate-200 px-6 py-3.5 flex flex-wrap items-center justify-between gap-3 sticky top-0 z-30 shrink-0">
-          <div className="relative w-full sm:w-80">
+        <header className="bg-white border-b border-slate-200 px-4 sm:px-6 py-3 flex items-center justify-between gap-3 sticky top-0 z-30 shrink-0">
+          <div className="relative w-full max-w-xs sm:w-80">
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-2.5" />
             <input
               type="text"
@@ -351,24 +351,56 @@ export default function PortalApp() {
             />
           </div>
 
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2.5 sm:gap-3">
             {canCreateVideo && (
               <button
                 onClick={() => {
                   setEditingVideo(null);
                   setDrawerOpen(true);
                 }}
-                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-xl flex items-center gap-1.5 shadow-xs transition cursor-pointer"
+                className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-xl flex items-center gap-1.5 shadow-xs transition cursor-pointer shrink-0"
               >
                 <Plus className="w-4 h-4" />
-                Add New Video
+                <span className="hidden xs:inline">Add Video</span>
               </button>
             )}
+
+            {/* Quick User Badge & Sign Out in Top Header */}
+            <div className="flex items-center gap-2 pl-2 sm:pl-3 border-l border-slate-200 shrink-0">
+              <button
+                onClick={() => setProfileOpen(true)}
+                className="flex items-center gap-2 p-1 rounded-xl hover:bg-slate-100 transition cursor-pointer group text-left"
+                title="Edit Profile & Password"
+              >
+                <span
+                  className="w-7 h-7 rounded-full text-white text-xs font-bold flex items-center justify-center shrink-0"
+                  style={{ backgroundColor: user.avatar_color }}
+                >
+                  {user.name.charAt(0)}
+                </span>
+                <div className="hidden sm:block">
+                  <p className="text-xs font-bold text-slate-800 leading-tight group-hover:text-indigo-600">
+                    {user.name}
+                  </p>
+                  <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider">
+                    {ROLE_META[user.role].label}
+                  </p>
+                </div>
+              </button>
+
+              <button
+                onClick={handleLogout}
+                className="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
+                title="Sign Out"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         </header>
 
         {/* Active Page View */}
-        <main className="flex-1 p-6 max-w-[1600px] w-full mx-auto">
+        <main className="flex-1 p-4 sm:p-6 max-w-[1600px] w-full mx-auto">
           {/* OWNER / ADMIN / MANAGER VIEW */}
           {activeTab === "videos" && canManageOps && (
             <OwnerHubTab
