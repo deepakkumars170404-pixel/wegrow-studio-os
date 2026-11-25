@@ -33,9 +33,13 @@ export async function POST(request: Request) {
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  if (!canManageClientsAndAssign(user.role)) {
+  const canAddClient =
+    canManageClientsAndAssign(user.role) ||
+    user.role === "content_writer" ||
+    user.role === "ai_content_creator";
+  if (!canAddClient) {
     return NextResponse.json(
-      { error: "Only Owner, Admin, or Manager can add clients." },
+      { error: "Only Owner, Admin, Manager or Creator can add clients." },
       { status: 403 }
     );
   }
