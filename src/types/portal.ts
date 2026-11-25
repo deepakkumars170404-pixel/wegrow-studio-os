@@ -4,6 +4,7 @@ export interface StaffMember {
   id: number;
   name: string;
   email: string;
+  phone?: string;
   role: UserRole;
   avatar_color: string;
   active: number;

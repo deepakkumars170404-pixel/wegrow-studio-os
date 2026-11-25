@@ -55,6 +55,10 @@ export async function PATCH(
     updates.push("name = ?");
     values.push(String(body.name).trim());
   }
+  if (body.phone !== undefined) {
+    updates.push("phone = ?");
+    values.push(String(body.phone || "").trim());
+  }
 
   if (updates.length === 0) {
     return NextResponse.json({ error: "No valid fields to update." }, { status: 400 });
@@ -67,7 +71,7 @@ export async function PATCH(
   });
 
   const updated = await db.execute({
-    sql: "SELECT id, name, email, role, avatar_color, active, created_at FROM users WHERE id = ?",
+    sql: "SELECT id, name, email, phone, role, avatar_color, active, created_at FROM users WHERE id = ?",
     args: [targetId],
   });
 

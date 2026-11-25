@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { canManageClientsAndAssign, getSessionUser } from "@/lib/auth";
+import { formatDeadline } from "@/lib/constants";
+import { createShootDoneAlertMessage, sendWhatsAppApi } from "@/lib/whatsapp";
 
 export async function PATCH(
   request: Request,
@@ -95,7 +97,7 @@ export async function PATCH(
 
   const updated = await db.execute({
     sql: `SELECT v.*, c.name AS client_name, c.industry AS client_industry,
-      e.name AS editor_name, e.avatar_color AS editor_color,
+      e.name AS editor_name, e.avatar_color AS editor_color, e.phone AS editor_phone,
       w.name AS writer_name, cam.name AS cameraman_name
      FROM videos v
      JOIN clients c ON c.id = v.client_id
@@ -106,7 +108,28 @@ export async function PATCH(
     args: [videoId],
   });
 
-  return NextResponse.json({ video: updated.rows[0] });
+  const updatedRow = updated.rows[0];
+
+  // Automated WhatsApp trigger when shoot is marked done
+  if (body.stage === "shoot_done" && updatedRow?.editor_phone) {
+    try {
+      const msg = createShootDoneAlertMessage({
+        clientName: String(updatedRow.client_name || ""),
+        videoTitle: String(updatedRow.title || ""),
+        editorName: String(updatedRow.editor_name || "Editor"),
+        editDeadline: formatDeadline(String(updatedRow.edit_deadline || "")),
+        rawLink: String(updatedRow.raw_link || ""),
+      });
+      sendWhatsAppApi({
+        phone: String(updatedRow.editor_phone),
+        message: msg,
+      }).catch((e) => console.warn("WhatsApp background dispatch failed:", e));
+    } catch (e) {
+      console.warn("WhatsApp trigger error:", e);
+    }
+  }
+
+  return NextResponse.json({ video: updatedRow });
 }
 
 export async function DELETE(

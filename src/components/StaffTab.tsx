@@ -22,6 +22,7 @@ export default function StaffTab({
   const [showModal, setShowModal] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("wegrow123");
   const [role, setRole] = useState<UserRole>("editor");
   const [saving, setSaving] = useState(false);
@@ -37,7 +38,7 @@ export default function StaffTab({
       const res = await fetch("/api/staff", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password, role }),
+        body: JSON.stringify({ name, email, phone, password, role }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -46,6 +47,7 @@ export default function StaffTab({
       }
       setName("");
       setEmail("");
+      setPhone("");
       setPassword("wegrow123");
       setRole("editor");
       setShowModal(false);
@@ -135,6 +137,11 @@ export default function StaffTab({
                         <div>
                           <p className="font-bold text-slate-900">{m.name}</p>
                           <p className="text-[11px] text-slate-500">{m.email}</p>
+                          {m.phone && (
+                            <p className="text-[10px] text-emerald-600 font-medium">
+                              📱 {m.phone}
+                            </p>
+                          )}
                         </div>
                       </div>
                     </td>
@@ -247,6 +254,19 @@ export default function StaffTab({
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="vikram@wegrow.in"
+                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl text-slate-900"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  WhatsApp Phone Number (For Task Alerts)
+                </label>
+                <input
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="e.g. 9876543210"
                   className="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl text-slate-900"
                 />
               </div>

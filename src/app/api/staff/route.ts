@@ -12,7 +12,7 @@ export async function GET() {
 
   const db = await getDb();
   const res = await db.execute(
-    `SELECT id, name, email, role, avatar_color, active, created_at
+    `SELECT id, name, email, phone, role, avatar_color, active, created_at
      FROM users
      ORDER BY CASE role
        WHEN 'owner' THEN 1
@@ -79,14 +79,15 @@ export async function POST(request: Request) {
       );
     }
 
+    const phone = String(body.phone || "").trim();
     const color = AVATAR_COLORS[Math.floor(Math.random() * AVATAR_COLORS.length)];
     const result = await db.execute({
-      sql: "INSERT INTO users (name, email, password_hash, role, avatar_color) VALUES (?, ?, ?, ?, ?)",
-      args: [name, email, hashPassword(password), role, color],
+      sql: "INSERT INTO users (name, email, phone, password_hash, role, avatar_color) VALUES (?, ?, ?, ?, ?, ?)",
+      args: [name, email, phone, hashPassword(password), role, color],
     });
 
     const created = await db.execute({
-      sql: "SELECT id, name, email, role, avatar_color, active, created_at FROM users WHERE id = ?",
+      sql: "SELECT id, name, email, phone, role, avatar_color, active, created_at FROM users WHERE id = ?",
       args: [Number(result.lastInsertRowid)],
     });
 

@@ -28,6 +28,7 @@ export interface UserRecord {
   id: number;
   name: string;
   email: string;
+  phone?: string;
   role: UserRole;
   avatar_color: string;
   active: number;
@@ -174,7 +175,7 @@ async function initSchemaAndSeed(db: Client): Promise<void> {
     );
   }
 
-  // Migrate existing videos table to add assigned_cameraman_id if missing
+  // Migrate existing videos table to add assigned_cameraman_id & org_id if missing
   const videoColsRes = await db.execute("PRAGMA table_info(videos)");
   const hasCameramanCol = videoColsRes.rows.some(
     (col) => String(col.name) === "assigned_cameraman_id"
@@ -182,6 +183,71 @@ async function initSchemaAndSeed(db: Client): Promise<void> {
   if (!hasCameramanCol) {
     await db.execute(
       "ALTER TABLE videos ADD COLUMN assigned_cameraman_id INTEGER REFERENCES users(id) ON DELETE SET NULL"
+    );
+  }
+  const hasVideoOrgId = videoColsRes.rows.some(
+    (col) => String(col.name) === "org_id"
+  );
+  if (!hasVideoOrgId) {
+    await db.execute("ALTER TABLE videos ADD COLUMN org_id INTEGER NOT NULL DEFAULT 1");
+  }
+
+  // Migrate users table to add phone & org_id if missing
+  const userColsRes = await db.execute("PRAGMA table_info(users)");
+  const hasPhoneCol = userColsRes.rows.some(
+    (col) => String(col.name) === "phone"
+  );
+  if (!hasPhoneCol) {
+    await db.execute("ALTER TABLE users ADD COLUMN phone TEXT NOT NULL DEFAULT ''");
+  }
+  const hasUserOrgId = userColsRes.rows.some(
+    (col) => String(col.name) === "org_id"
+  );
+  if (!hasUserOrgId) {
+    await db.execute("ALTER TABLE users ADD COLUMN org_id INTEGER NOT NULL DEFAULT 1");
+  }
+
+  // Migrate clients table to add org_id if missing
+  const clientColsRes = await db.execute("PRAGMA table_info(clients)");
+  const hasClientOrgId = clientColsRes.rows.some(
+    (col) => String(col.name) === "org_id"
+  );
+  if (!hasClientOrgId) {
+    await db.execute("ALTER TABLE clients ADD COLUMN org_id INTEGER NOT NULL DEFAULT 1");
+  }
+
+  // Ensure settings table exists
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL,
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )
+  `);
+
+  // Seed default settings if missing
+  const settingsRows = await db.execute("SELECT COUNT(*) as c FROM settings");
+  if (Number(settingsRows.rows[0]?.c ?? 0) === 0) {
+    await db.batch(
+      [
+        {
+          sql: "INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)",
+          args: ["social_auto_posting", "0"],
+        },
+        {
+          sql: "INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)",
+          args: ["whatsapp_enabled", "1"],
+        },
+        {
+          sql: "INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)",
+          args: ["whatsapp_license", "90093749600"],
+        },
+        {
+          sql: "INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)",
+          args: ["whatsapp_api_key", "kPHm6t2y5cW78qhKGvZYefQ3E"],
+        },
+      ],
+      "write"
     );
   }
 

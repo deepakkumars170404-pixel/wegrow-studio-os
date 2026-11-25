@@ -11,6 +11,9 @@ import {
   Search,
   LogOut,
   ListTodo,
+  TrendingUp,
+  Settings,
+  ShieldCheck,
 } from "lucide-react";
 import { ROLE_META } from "@/lib/constants";
 import type { VideoStage } from "@/lib/db";
@@ -21,9 +24,19 @@ import StaffQueueTab from "./StaffQueueTab";
 import ClientsTab from "./ClientsTab";
 import CalendarTab from "./CalendarTab";
 import StaffTab from "./StaffTab";
+import AnalyticsTab from "./AnalyticsTab";
+import SettingsTab from "./SettingsTab";
+import ProfileModal from "./ProfileModal";
 import VideoDrawer from "./VideoDrawer";
 
-type TabKey = "videos" | "my_queue" | "clients" | "calendar" | "staff";
+type TabKey =
+  | "videos"
+  | "my_queue"
+  | "analytics"
+  | "clients"
+  | "calendar"
+  | "staff"
+  | "settings";
 
 export default function PortalApp() {
   const [user, setUser] = useState<StaffMember | null>(null);
@@ -36,6 +49,7 @@ export default function PortalApp() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
   const [editingVideo, setEditingVideo] = useState<VideoItem | null>(null);
 
   const fetchAllData = useCallback(async () => {
@@ -152,6 +166,11 @@ export default function PortalApp() {
             label: "All Videos & Tasks",
             icon: <Film className="w-4 h-4" />,
           },
+          {
+            key: "analytics" as const,
+            label: "Performance & Velocity",
+            icon: <TrendingUp className="w-4 h-4" />,
+          },
         ]
       : [
           {
@@ -183,6 +202,11 @@ export default function PortalApp() {
             key: "staff" as const,
             label: "Team & Staff",
             icon: <Users className="w-4 h-4" />,
+          },
+          {
+            key: "settings" as const,
+            label: "System Settings",
+            icon: <Settings className="w-4 h-4" />,
           },
         ]
       : []),
@@ -227,21 +251,28 @@ export default function PortalApp() {
         </div>
 
         {/* Logged-in User Card */}
-        <div className="p-4 border-t border-slate-800/80 space-y-3">
-          <div className="flex items-center gap-2.5">
+        <div className="p-4 border-t border-slate-800/80 space-y-2.5">
+          <button
+            onClick={() => setProfileOpen(true)}
+            className="w-full flex items-center gap-2.5 p-2 rounded-xl hover:bg-slate-900 text-left transition cursor-pointer group"
+          >
             <span
               className="w-8 h-8 rounded-full text-white text-xs font-bold flex items-center justify-center shrink-0"
               style={{ backgroundColor: user.avatar_color }}
             >
               {user.name.charAt(0)}
             </span>
-            <div className="min-w-0">
-              <p className="text-xs font-bold text-white truncate">{user.name}</p>
-              <p className="text-[10px] text-indigo-300 font-semibold uppercase tracking-wider">
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-bold text-white truncate group-hover:text-indigo-300">
+                {user.name}
+              </p>
+              <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">
                 {ROLE_META[user.role].label}
               </p>
             </div>
-          </div>
+            <ShieldCheck className="w-4 h-4 text-slate-500 group-hover:text-indigo-400" />
+          </button>
+
           <button
             onClick={handleLogout}
             className="w-full py-2 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer"
@@ -306,6 +337,9 @@ export default function PortalApp() {
             />
           )}
 
+          {/* ANALYTICS & VELOCITY TAB */}
+          {activeTab === "analytics" && canManageOps && <AnalyticsTab />}
+
           {/* STAFF DEDICATED QUEUE (Editor, Cameraman, Content Creator, AI Creator) */}
           {activeTab === "my_queue" && (
             <StaffQueueTab
@@ -360,6 +394,9 @@ export default function PortalApp() {
               onRefresh={fetchAllData}
             />
           )}
+
+          {/* SYSTEM SETTINGS TAB */}
+          {activeTab === "settings" && canManageStaff && <SettingsTab />}
         </main>
       </div>
 
@@ -373,6 +410,17 @@ export default function PortalApp() {
         canDelete={canManageOps}
         onClose={() => setDrawerOpen(false)}
         onSaved={fetchAllData}
+      />
+
+      {/* Profile & Password Change Modal */}
+      <ProfileModal
+        user={user}
+        open={profileOpen}
+        onClose={() => setProfileOpen(false)}
+        onProfileUpdated={(updated) => {
+          setUser(updated);
+          fetchAllData();
+        }}
       />
     </div>
   );

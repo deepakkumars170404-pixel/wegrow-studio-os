@@ -15,7 +15,12 @@ import {
   X,
   Building2,
   Users,
+  MessageSquare,
 } from "lucide-react";
+import {
+  createDeadlineAlertMessage,
+  getDirectWhatsAppUrl,
+} from "@/lib/whatsapp";
 import {
   formatDeadline,
   isDeadlineDueTodayOrOverdue,
@@ -486,17 +491,43 @@ export default function OwnerHubTab({
                         </div>
                       </td>
 
-                      {/* Edit Action */}
-                      <td className="py-3.5 px-4 text-right">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onOpenVideo(video);
-                          }}
-                          className="px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition cursor-pointer"
-                        >
-                          Edit
-                        </button>
+                      {/* Edit & WhatsApp Actions */}
+                      <td className="py-3.5 px-4 text-right" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-1.5">
+                          {(() => {
+                            const editor = staff.find((s) => s.id === video.assigned_editor_id);
+                            if (editor?.phone) {
+                              const waUrl = getDirectWhatsAppUrl(
+                                editor.phone,
+                                createDeadlineAlertMessage({
+                                  clientName: video.client_name,
+                                  videoTitle: video.title,
+                                  editorName: editor.name,
+                                  editDeadline: formatDeadline(video.edit_deadline),
+                                })
+                              );
+                              return (
+                                <a
+                                  href={waUrl}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  title={`WhatsApp ping to ${editor.name}`}
+                                  className="p-1.5 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg border border-emerald-200 transition"
+                                >
+                                  <MessageSquare className="w-3.5 h-3.5" />
+                                </a>
+                              );
+                            }
+                            return null;
+                          })()}
+
+                          <button
+                            onClick={() => onOpenVideo(video)}
+                            className="px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition cursor-pointer"
+                          >
+                            Edit
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
