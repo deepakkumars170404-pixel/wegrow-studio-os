@@ -8,22 +8,20 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const db = getDb();
-  const clients = db
-    .prepare(
-      `SELECT c.*,
-        COUNT(v.id) AS total_videos,
-        SUM(CASE WHEN v.stage = 'posted' THEN 1 ELSE 0 END) AS posted_count,
-        SUM(CASE WHEN v.stage IN ('scheduled', 'client_approval') THEN 1 ELSE 0 END) AS ready_count,
-        SUM(CASE WHEN v.stage != 'posted' THEN 1 ELSE 0 END) AS pending_count
-       FROM clients c
-       LEFT JOIN videos v ON v.client_id = c.id
-       GROUP BY c.id
-       ORDER BY c.status ASC, c.name ASC`
-    )
-    .all();
+  const db = await getDb();
+  const res = await db.execute(
+    `SELECT c.*,
+      COUNT(v.id) AS total_videos,
+      SUM(CASE WHEN v.stage = 'posted' THEN 1 ELSE 0 END) AS posted_count,
+      SUM(CASE WHEN v.stage IN ('scheduled', 'client_approval') THEN 1 ELSE 0 END) AS ready_count,
+      SUM(CASE WHEN v.stage != 'posted' THEN 1 ELSE 0 END) AS pending_count
+     FROM clients c
+     LEFT JOIN videos v ON v.client_id = c.id
+     GROUP BY c.id
+     ORDER BY c.status ASC, c.name ASC`
+  );
 
-  return NextResponse.json({ clients });
+  return NextResponse.json({ clients: res.rows });
 }
 
 export async function POST(request: Request) {
@@ -50,15 +48,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Client name is required." }, { status: 400 });
     }
 
-    const db = getDb();
-    const res = db
-      .prepare(
-        "INSERT INTO clients (name, industry, monthly_target, brand_drive_url, guidelines) VALUES (?, ?, ?, ?, ?)"
-      )
-      .run(name, industry, monthly_target, brand_drive_url, guidelines);
+    const db = await getDb();
+    const res = await db.execute({
+      sql: "INSERT INTO clients (name, industry, monthly_target, brand_drive_url, guidelines) VALUES (?, ?, ?, ?, ?)",
+      args: [name, industry, monthly_target, brand_drive_url, guidelines],
+    });
 
-    const created = db.prepare("SELECT * FROM clients WHERE id = ?").get(res.lastInsertRowid);
-    return NextResponse.json({ client: created }, { status: 201 });
+    const created = await db.execute({
+      sql: "SELECT * FROM clients WHERE id = ?",
+      args: [Number(res.lastInsertRowid)],
+    });
+    return NextResponse.json({ client: created.rows[0] }, { status: 201 });
   } catch {
     return NextResponse.json({ error: "Failed to create client." }, { status: 500 });
   }

@@ -8,7 +8,7 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const db = getDb();
+  const db = await getDb();
   const isCreatorOrEditor =
     user.role === "editor" ||
     user.role === "content_writer" ||
@@ -33,11 +33,11 @@ export async function GET() {
       v.id DESC
   `;
 
-  const videos = isCreatorOrEditor
-    ? db.prepare(baseQuery).all(user.id, user.id)
-    : db.prepare(baseQuery).all();
+  const res = isCreatorOrEditor
+    ? await db.execute({ sql: baseQuery, args: [user.id, user.id] })
+    : await db.execute(baseQuery);
 
-  return NextResponse.json({ videos });
+  return NextResponse.json({ videos: res.rows });
 }
 
 export async function POST(request: Request) {
@@ -60,12 +60,11 @@ export async function POST(request: Request) {
     const stage = String(body.stage || "script");
     const priority = String(body.priority || "normal");
     const assigned_editor_id = body.assigned_editor_id ? Number(body.assigned_editor_id) : null;
-    const assigned_writer_id =
-      body.assigned_writer_id
-        ? Number(body.assigned_writer_id)
-        : user.role === "content_writer" || user.role === "ai_content_creator"
-        ? user.id
-        : null;
+    const assigned_writer_id = body.assigned_writer_id
+      ? Number(body.assigned_writer_id)
+      : user.role === "content_writer" || user.role === "ai_content_creator"
+      ? user.id
+      : null;
     const edit_deadline = String(body.edit_deadline || "");
     const posting_date = String(body.posting_date || "");
     const raw_link = String(body.raw_link || "").trim();
@@ -80,16 +79,14 @@ export async function POST(request: Request) {
       );
     }
 
-    const db = getDb();
-    const res = db
-      .prepare(
-        `INSERT INTO videos (
-          client_id, title, content_type, stage, priority,
-          assigned_editor_id, assigned_writer_id,
-          edit_deadline, posting_date, raw_link, final_link, live_url, notes, created_by
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-      )
-      .run(
+    const db = await getDb();
+    const res = await db.execute({
+      sql: `INSERT INTO videos (
+        client_id, title, content_type, stage, priority,
+        assigned_editor_id, assigned_writer_id,
+        edit_deadline, posting_date, raw_link, final_link, live_url, notes, created_by
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      args: [
         client_id,
         title,
         content_type,
@@ -103,22 +100,22 @@ export async function POST(request: Request) {
         final_link,
         live_url,
         notes,
-        user.id
-      );
+        user.id,
+      ],
+    });
 
-    const created = db
-      .prepare(
-        `SELECT v.*, c.name AS client_name, c.industry AS client_industry,
-          e.name AS editor_name, e.avatar_color AS editor_color, w.name AS writer_name
-         FROM videos v
-         JOIN clients c ON c.id = v.client_id
-         LEFT JOIN users e ON e.id = v.assigned_editor_id
-         LEFT JOIN users w ON w.id = v.assigned_writer_id
-         WHERE v.id = ?`
-      )
-      .get(res.lastInsertRowid);
+    const created = await db.execute({
+      sql: `SELECT v.*, c.name AS client_name, c.industry AS client_industry,
+        e.name AS editor_name, e.avatar_color AS editor_color, w.name AS writer_name
+       FROM videos v
+       JOIN clients c ON c.id = v.client_id
+       LEFT JOIN users e ON e.id = v.assigned_editor_id
+       LEFT JOIN users w ON w.id = v.assigned_writer_id
+       WHERE v.id = ?`,
+      args: [Number(res.lastInsertRowid)],
+    });
 
-    return NextResponse.json({ video: created }, { status: 201 });
+    return NextResponse.json({ video: created.rows[0] }, { status: 201 });
   } catch {
     return NextResponse.json({ error: "Failed to create video." }, { status: 500 });
   }

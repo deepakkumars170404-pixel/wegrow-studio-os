@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getDb, hashPassword, UserRecord } from "@/lib/db";
+import { getDb, hashPassword } from "@/lib/db";
 import { createSession, SESSION_COOKIE_NAME } from "@/lib/auth";
 
 export async function POST(request: Request) {
@@ -15,37 +15,37 @@ export async function POST(request: Request) {
       );
     }
 
-    const db = getDb();
-    const user = db
-      .prepare(
-        "SELECT id, name, email, password_hash, role, avatar_color, active, created_at FROM users WHERE lower(email) = ?"
-      )
-      .get(email) as (UserRecord & { password_hash: string }) | undefined;
+    const db = await getDb();
+    const res = await db.execute({
+      sql: "SELECT id, name, email, password_hash, role, avatar_color, active, created_at FROM users WHERE lower(email) = ?",
+      args: [email],
+    });
+    const user = res.rows[0];
 
-    if (!user || user.password_hash !== hashPassword(password)) {
+    if (!user || String(user.password_hash) !== hashPassword(password)) {
       return NextResponse.json(
         { error: "Invalid email or password." },
         { status: 401 }
       );
     }
 
-    if (!user.active) {
+    if (!Number(user.active)) {
       return NextResponse.json(
         { error: "This account has been deactivated. Contact Owner/Admin." },
         { status: 403 }
       );
     }
 
-    const token = createSession(user.id);
+    const token = await createSession(Number(user.id));
     const response = NextResponse.json({
       user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        avatar_color: user.avatar_color,
-        active: user.active,
-        created_at: user.created_at,
+        id: Number(user.id),
+        name: String(user.name),
+        email: String(user.email),
+        role: String(user.role),
+        avatar_color: String(user.avatar_color),
+        active: Number(user.active),
+        created_at: String(user.created_at),
       },
     });
 

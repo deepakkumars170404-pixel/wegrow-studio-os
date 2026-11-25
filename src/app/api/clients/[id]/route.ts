@@ -17,10 +17,13 @@ export async function PATCH(
   const { id } = await context.params;
   const clientId = Number(id);
   const body = await request.json();
-  const db = getDb();
+  const db = await getDb();
 
-  const existing = db.prepare("SELECT id FROM clients WHERE id = ?").get(clientId);
-  if (!existing) {
+  const existing = await db.execute({
+    sql: "SELECT id FROM clients WHERE id = ?",
+    args: [clientId],
+  });
+  if (existing.rows.length === 0) {
     return NextResponse.json({ error: "Client not found." }, { status: 404 });
   }
 
@@ -57,7 +60,13 @@ export async function PATCH(
   }
 
   values.push(clientId);
-  db.prepare(`UPDATE clients SET ${updates.join(", ")} WHERE id = ?`).run(...values);
-  const updated = db.prepare("SELECT * FROM clients WHERE id = ?").get(clientId);
-  return NextResponse.json({ client: updated });
+  await db.execute({
+    sql: `UPDATE clients SET ${updates.join(", ")} WHERE id = ?`,
+    args: values,
+  });
+  const updated = await db.execute({
+    sql: "SELECT * FROM clients WHERE id = ?",
+    args: [clientId],
+  });
+  return NextResponse.json({ client: updated.rows[0] });
 }

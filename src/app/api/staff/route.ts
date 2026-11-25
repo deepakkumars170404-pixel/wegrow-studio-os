@@ -10,22 +10,20 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const db = getDb();
-  const staff = db
-    .prepare(
-      `SELECT id, name, email, role, avatar_color, active, created_at
-       FROM users
-       ORDER BY CASE role
-         WHEN 'owner' THEN 1
-         WHEN 'admin' THEN 2
-         WHEN 'manager' THEN 3
-         WHEN 'editor' THEN 4
-         ELSE 5
-       END, id ASC`
-    )
-    .all();
+  const db = await getDb();
+  const res = await db.execute(
+    `SELECT id, name, email, role, avatar_color, active, created_at
+     FROM users
+     ORDER BY CASE role
+       WHEN 'owner' THEN 1
+       WHEN 'admin' THEN 2
+       WHEN 'manager' THEN 3
+       WHEN 'editor' THEN 4
+       ELSE 5
+     END, id ASC`
+  );
 
-  return NextResponse.json({ staff });
+  return NextResponse.json({ staff: res.rows });
 }
 
 export async function POST(request: Request) {
@@ -68,9 +66,12 @@ export async function POST(request: Request) {
       );
     }
 
-    const db = getDb();
-    const existing = db.prepare("SELECT id FROM users WHERE lower(email) = ?").get(email);
-    if (existing) {
+    const db = await getDb();
+    const existing = await db.execute({
+      sql: "SELECT id FROM users WHERE lower(email) = ?",
+      args: [email],
+    });
+    if (existing.rows.length > 0) {
       return NextResponse.json(
         { error: "A staff member with this email already exists." },
         { status: 409 }
@@ -78,17 +79,17 @@ export async function POST(request: Request) {
     }
 
     const color = AVATAR_COLORS[Math.floor(Math.random() * AVATAR_COLORS.length)];
-    const result = db
-      .prepare(
-        "INSERT INTO users (name, email, password_hash, role, avatar_color) VALUES (?, ?, ?, ?, ?)"
-      )
-      .run(name, email, hashPassword(password), role, color);
+    const result = await db.execute({
+      sql: "INSERT INTO users (name, email, password_hash, role, avatar_color) VALUES (?, ?, ?, ?, ?)",
+      args: [name, email, hashPassword(password), role, color],
+    });
 
-    const created = db
-      .prepare("SELECT id, name, email, role, avatar_color, active, created_at FROM users WHERE id = ?")
-      .get(result.lastInsertRowid);
+    const created = await db.execute({
+      sql: "SELECT id, name, email, role, avatar_color, active, created_at FROM users WHERE id = ?",
+      args: [Number(result.lastInsertRowid)],
+    });
 
-    return NextResponse.json({ staff: created }, { status: 201 });
+    return NextResponse.json({ staff: created.rows[0] }, { status: 201 });
   } catch {
     return NextResponse.json({ error: "Failed to add staff." }, { status: 500 });
   }

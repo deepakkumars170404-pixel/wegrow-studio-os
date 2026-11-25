@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getDb, UserRole } from "@/lib/db";
+import { getDb } from "@/lib/db";
 import { canManageStaff, getSessionUser } from "@/lib/auth";
 
 export async function PATCH(
@@ -19,15 +19,17 @@ export async function PATCH(
 
   const { id } = await context.params;
   const targetId = Number(id);
-  const db = getDb();
-  const target = db
-    .prepare("SELECT id, role FROM users WHERE id = ?")
-    .get(targetId) as { id: number; role: UserRole } | undefined;
+  const db = await getDb();
+  const targetRes = await db.execute({
+    sql: "SELECT id, role FROM users WHERE id = ?",
+    args: [targetId],
+  });
+  const target = targetRes.rows[0];
 
   if (!target) {
     return NextResponse.json({ error: "Staff not found." }, { status: 404 });
   }
-  if (target.role === "owner") {
+  if (String(target.role) === "owner") {
     return NextResponse.json(
       { error: "Owner account cannot be modified here." },
       { status: 400 }
@@ -59,11 +61,15 @@ export async function PATCH(
   }
 
   values.push(targetId);
-  db.prepare(`UPDATE users SET ${updates.join(", ")} WHERE id = ?`).run(...values);
+  await db.execute({
+    sql: `UPDATE users SET ${updates.join(", ")} WHERE id = ?`,
+    args: values,
+  });
 
-  const updated = db
-    .prepare("SELECT id, name, email, role, avatar_color, active, created_at FROM users WHERE id = ?")
-    .get(targetId);
+  const updated = await db.execute({
+    sql: "SELECT id, name, email, role, avatar_color, active, created_at FROM users WHERE id = ?",
+    args: [targetId],
+  });
 
-  return NextResponse.json({ staff: updated });
+  return NextResponse.json({ staff: updated.rows[0] });
 }

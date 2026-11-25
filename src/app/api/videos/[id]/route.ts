@@ -13,13 +13,13 @@ export async function PATCH(
 
   const { id } = await context.params;
   const videoId = Number(id);
-  const db = getDb();
+  const db = await getDb();
 
-  const existing = db
-    .prepare("SELECT id, assigned_editor_id, assigned_writer_id FROM videos WHERE id = ?")
-    .get(videoId) as
-    | { id: number; assigned_editor_id: number | null; assigned_writer_id: number | null }
-    | undefined;
+  const existingRes = await db.execute({
+    sql: "SELECT id, assigned_editor_id, assigned_writer_id FROM videos WHERE id = ?",
+    args: [videoId],
+  });
+  const existing = existingRes.rows[0];
 
   if (!existing) {
     return NextResponse.json({ error: "Video not found." }, { status: 404 });
@@ -27,7 +27,8 @@ export async function PATCH(
 
   const isManagerOrAbove = canManageClientsAndAssign(user.role);
   const isAssigned =
-    existing.assigned_editor_id === user.id || existing.assigned_writer_id === user.id;
+    Number(existing.assigned_editor_id) === user.id ||
+    Number(existing.assigned_writer_id) === user.id;
 
   if (!isManagerOrAbove && !isAssigned) {
     return NextResponse.json(
@@ -80,21 +81,23 @@ export async function PATCH(
   }
 
   values.push(videoId);
-  db.prepare(`UPDATE videos SET ${updates.join(", ")} WHERE id = ?`).run(...values);
+  await db.execute({
+    sql: `UPDATE videos SET ${updates.join(", ")} WHERE id = ?`,
+    args: values,
+  });
 
-  const updated = db
-    .prepare(
-      `SELECT v.*, c.name AS client_name, c.industry AS client_industry,
-        e.name AS editor_name, e.avatar_color AS editor_color, w.name AS writer_name
-       FROM videos v
-       JOIN clients c ON c.id = v.client_id
-       LEFT JOIN users e ON e.id = v.assigned_editor_id
-       LEFT JOIN users w ON w.id = v.assigned_writer_id
-       WHERE v.id = ?`
-    )
-    .get(videoId);
+  const updated = await db.execute({
+    sql: `SELECT v.*, c.name AS client_name, c.industry AS client_industry,
+      e.name AS editor_name, e.avatar_color AS editor_color, w.name AS writer_name
+     FROM videos v
+     JOIN clients c ON c.id = v.client_id
+     LEFT JOIN users e ON e.id = v.assigned_editor_id
+     LEFT JOIN users w ON w.id = v.assigned_writer_id
+     WHERE v.id = ?`,
+    args: [videoId],
+  });
 
-  return NextResponse.json({ video: updated });
+  return NextResponse.json({ video: updated.rows[0] });
 }
 
 export async function DELETE(
@@ -113,7 +116,10 @@ export async function DELETE(
   }
 
   const { id } = await context.params;
-  const db = getDb();
-  db.prepare("DELETE FROM videos WHERE id = ?").run(Number(id));
+  const db = await getDb();
+  await db.execute({
+    sql: "DELETE FROM videos WHERE id = ?",
+    args: [Number(id)],
+  });
   return NextResponse.json({ ok: true });
 }
