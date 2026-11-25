@@ -73,6 +73,8 @@ export default function PortalApp() {
       const sData = await sRes.json();
       setStaff(sData.staff || []);
     }
+    // Background check for approaching deadlines (Zero-cost cron)
+    fetch("/api/cron/deadline-alerts").catch(() => {});
   }, []);
 
   useEffect(() => {
