@@ -3,42 +3,38 @@
 import React, { useCallback, useEffect, useState } from "react";
 import {
   Clapperboard,
-  LayoutDashboard,
-  Kanban,
+  Film,
   Building2,
   CalendarDays,
   Users,
   Plus,
   Search,
   LogOut,
-  CheckSquare,
+  ListTodo,
 } from "lucide-react";
 import { ROLE_META } from "@/lib/constants";
 import type { VideoStage } from "@/lib/db";
 import type { ClientItem, StaffMember, VideoItem } from "@/types/portal";
 import LoginView from "./LoginView";
-import OverviewTab from "./OverviewTab";
-import PipelineTab from "./PipelineTab";
+import OwnerHubTab from "./OwnerHubTab";
+import StaffQueueTab from "./StaffQueueTab";
 import ClientsTab from "./ClientsTab";
 import CalendarTab from "./CalendarTab";
 import StaffTab from "./StaffTab";
 import VideoDrawer from "./VideoDrawer";
 
-type TabKey = "overview" | "pipeline" | "clients" | "calendar" | "staff";
+type TabKey = "videos" | "my_queue" | "clients" | "calendar" | "staff";
 
 export default function PortalApp() {
   const [user, setUser] = useState<StaffMember | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
 
-  const [activeTab, setActiveTab] = useState<TabKey>("overview");
+  const [activeTab, setActiveTab] = useState<TabKey>("videos");
   const [videos, setVideos] = useState<VideoItem[]>([]);
   const [clients, setClients] = useState<ClientItem[]>([]);
   const [staff, setStaff] = useState<StaffMember[]>([]);
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [myTasksOnly, setMyTasksOnly] = useState(false);
-  const [selectedClientId, setSelectedClientId] = useState<number | "all">("all");
-
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingVideo, setEditingVideo] = useState<VideoItem | null>(null);
 
@@ -70,15 +66,12 @@ export default function PortalApp() {
           const data = await res.json();
           if (data.user) {
             setUser(data.user);
-            if (
+            const isStaff =
               data.user.role === "editor" ||
+              data.user.role === "cameraman" ||
               data.user.role === "content_writer" ||
-              data.user.role === "ai_content_creator" ||
-              data.user.role === "cameraman"
-            ) {
-              setActiveTab("pipeline");
-              setMyTasksOnly(true);
-            }
+              data.user.role === "ai_content_creator";
+            setActiveTab(isStaff ? "my_queue" : "videos");
             await fetchAllData();
           }
         }
@@ -91,18 +84,12 @@ export default function PortalApp() {
 
   async function handleLoginSuccess(loggedInUser: StaffMember) {
     setUser(loggedInUser);
-    if (
+    const isStaff =
       loggedInUser.role === "editor" ||
+      loggedInUser.role === "cameraman" ||
       loggedInUser.role === "content_writer" ||
-      loggedInUser.role === "ai_content_creator" ||
-      loggedInUser.role === "cameraman"
-    ) {
-      setActiveTab("pipeline");
-      setMyTasksOnly(true);
-    } else {
-      setActiveTab("overview");
-      setMyTasksOnly(false);
-    }
+      loggedInUser.role === "ai_content_creator";
+    setActiveTab(isStaff ? "my_queue" : "videos");
     await fetchAllData();
   }
 
@@ -144,46 +131,42 @@ export default function PortalApp() {
   const canCreateVideo = user.role !== "editor" && user.role !== "cameraman";
 
   const visibleVideos = videos.filter((v) => {
-    if (myTasksOnly) {
-      const isMine =
-        v.assigned_editor_id === user.id ||
-        v.assigned_writer_id === user.id ||
-        v.assigned_cameraman_id === user.id;
-      if (!isMine) return false;
-    }
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       const match =
         v.title.toLowerCase().includes(q) ||
         v.client_name.toLowerCase().includes(q) ||
-        (v.editor_name || "").toLowerCase().includes(q);
+        (v.editor_name || "").toLowerCase().includes(q) ||
+        (v.cameraman_name || "").toLowerCase().includes(q);
       if (!match) return false;
     }
     return true;
   });
 
+  // Navigation Items per Role
   const navItems: { key: TabKey; label: string; icon: React.ReactNode }[] = [
     ...(canManageOps
       ? [
           {
-            key: "overview" as const,
-            label: "Executive Overview",
-            icon: <LayoutDashboard className="w-4 h-4" />,
+            key: "videos" as const,
+            label: "All Videos & Tasks",
+            icon: <Film className="w-4 h-4" />,
           },
         ]
-      : []),
-    {
-      key: "pipeline",
-      label:
-        user.role === "editor"
-          ? "My Editing Queue"
-          : user.role === "cameraman"
-          ? "My Shoot Queue"
-          : user.role === "content_writer" || user.role === "ai_content_creator"
-          ? "My Content Queue"
-          : "Video Pipeline",
-      icon: <Kanban className="w-4 h-4" />,
-    },
+      : [
+          {
+            key: "my_queue" as const,
+            label:
+              user.role === "editor"
+                ? "My Editing Queue"
+                : user.role === "cameraman"
+                ? "My Shoot Queue"
+                : user.role === "ai_content_creator"
+                ? "My AI Content"
+                : "My Scripts & Content",
+            icon: <ListTodo className="w-4 h-4" />,
+          },
+        ]),
     {
       key: "clients",
       label: canManageOps ? "Client Hub" : "Brand Kits",
@@ -269,9 +252,9 @@ export default function PortalApp() {
         </div>
       </aside>
 
-      {/* Main Content */}
+      {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Top Bar */}
+        {/* Top Header Bar */}
         <header className="bg-white border-b border-slate-200 px-6 py-3.5 flex flex-wrap items-center justify-between gap-3 sticky top-0 z-30">
           <div className="relative w-full sm:w-80">
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-2.5" />
@@ -279,26 +262,12 @@ export default function PortalApp() {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search videos, clients, editors..."
+              placeholder="Search videos, clients, crew..."
               className="w-full pl-9 pr-3.5 py-2 text-xs border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900"
             />
           </div>
 
           <div className="flex items-center gap-2.5">
-            {canManageOps && (
-              <button
-                onClick={() => setMyTasksOnly((v) => !v)}
-                className={`px-3 py-2 rounded-xl text-xs font-semibold border flex items-center gap-1.5 transition cursor-pointer ${
-                  myTasksOnly
-                    ? "bg-indigo-50 border-indigo-300 text-indigo-700"
-                    : "bg-white border-slate-300 text-slate-700 hover:bg-slate-50"
-                }`}
-              >
-                <CheckSquare className="w-3.5 h-3.5" />
-                My Tasks Only
-              </button>
-            )}
-
             {canCreateVideo && (
               <button
                 onClick={() => {
@@ -308,58 +277,70 @@ export default function PortalApp() {
                 className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-xl flex items-center gap-1.5 shadow-xs transition cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
-                New Video
+                Add New Video
               </button>
             )}
           </div>
         </header>
 
-        {/* Active View */}
+        {/* Active Page View */}
         <main className="flex-1 p-6 max-w-[1600px] w-full mx-auto">
-          {activeTab === "overview" && (
-            <OverviewTab
+          {/* OWNER / ADMIN / MANAGER VIEW */}
+          {activeTab === "videos" && canManageOps && (
+            <OwnerHubTab
               videos={visibleVideos}
               clients={clients}
               staff={staff}
-              onOpenVideo={(v) => {
-                setEditingVideo(v);
-                setDrawerOpen(true);
-              }}
-              onSelectClient={(clientId) => {
-                setSelectedClientId(clientId);
-                setActiveTab("pipeline");
-              }}
-            />
-          )}
-
-          {activeTab === "pipeline" && (
-            <PipelineTab
-              videos={visibleVideos}
-              clients={clients}
-              staff={staff}
-              userRole={user.role}
-              selectedClientId={selectedClientId}
-              onClientFilterChange={setSelectedClientId}
               onOpenVideo={(v) => {
                 setEditingVideo(v);
                 setDrawerOpen(true);
               }}
               onStageChange={handleStageChange}
+              onNewVideo={() => {
+                setEditingVideo(null);
+                setDrawerOpen(true);
+              }}
+              onSelectClient={() => {
+                setActiveTab("clients");
+              }}
             />
           )}
 
+          {/* STAFF DEDICATED QUEUE (Editor, Cameraman, Content Creator, AI Creator) */}
+          {activeTab === "my_queue" && (
+            <StaffQueueTab
+              user={user}
+              videos={visibleVideos}
+              onOpenVideo={(v) => {
+                setEditingVideo(v);
+                setDrawerOpen(true);
+              }}
+              onStageChange={handleStageChange}
+              onRefresh={fetchAllData}
+              onNewVideo={() => {
+                setEditingVideo(null);
+                setDrawerOpen(true);
+              }}
+            />
+          )}
+
+          {/* CLIENTS TAB */}
           {activeTab === "clients" && (
             <ClientsTab
               clients={clients}
               canManage={canManageOps}
               onRefresh={fetchAllData}
-              onViewClientVideos={(clientId) => {
-                setSelectedClientId(clientId);
-                setActiveTab("pipeline");
+              onViewClientVideos={() => {
+                if (canManageOps) {
+                  setActiveTab("videos");
+                } else {
+                  setActiveTab("my_queue");
+                }
               }}
             />
           )}
 
+          {/* CALENDAR TAB */}
           {activeTab === "calendar" && (
             <CalendarTab
               videos={visibleVideos}
@@ -370,7 +351,8 @@ export default function PortalApp() {
             />
           )}
 
-          {activeTab === "staff" && (
+          {/* TEAM & STAFF MANAGEMENT TAB */}
+          {activeTab === "staff" && canManageStaff && (
             <StaffTab
               staff={staff}
               videos={videos}
@@ -381,6 +363,7 @@ export default function PortalApp() {
         </main>
       </div>
 
+      {/* Video Details & Editing Drawer */}
       <VideoDrawer
         open={drawerOpen}
         video={editingVideo}
