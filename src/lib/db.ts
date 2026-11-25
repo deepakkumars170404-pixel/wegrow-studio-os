@@ -59,7 +59,13 @@ function createLibsqlClient(): Client {
     });
   }
 
-  // Fallback to local SQLite file via libsql when TURSO_AUTH_TOKEN is not yet configured
+  if (process.env.VERCEL) {
+    throw new Error(
+      "Missing TURSO_DATABASE_URL or TURSO_AUTH_TOKEN in Vercel Environment Variables."
+    );
+  }
+
+  // Fallback to local SQLite file via libsql when running locally without Turso token
   const dbDir = path.join(process.cwd(), "data");
   if (!fs.existsSync(dbDir)) {
     fs.mkdirSync(dbDir, { recursive: true });
