@@ -49,10 +49,12 @@ function addDaysISO(offsetDays: number): string {
 }
 
 function createLibsqlClient(): Client {
-  const tursoUrl = process.env.TURSO_DATABASE_URL?.trim();
+  const rawUrl = process.env.TURSO_DATABASE_URL?.trim();
   const tursoToken = process.env.TURSO_AUTH_TOKEN?.trim();
 
-  if (tursoUrl && tursoToken) {
+  if (rawUrl && tursoToken) {
+    // Use stateless HTTPS transport instead of WebSocket (libsql://) for reliable Vercel serverless execution
+    const tursoUrl = rawUrl.replace(/^libsql:\/\//i, "https://");
     return createClient({
       url: tursoUrl,
       authToken: tursoToken,
