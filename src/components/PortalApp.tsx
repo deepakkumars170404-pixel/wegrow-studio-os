@@ -14,6 +14,8 @@ import {
   TrendingUp,
   Settings,
   ShieldCheck,
+  Menu,
+  X,
 } from "lucide-react";
 import { ROLE_META } from "@/lib/constants";
 import type { VideoStage } from "@/lib/db";
@@ -49,6 +51,7 @@ export default function PortalApp() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [editingVideo, setEditingVideo] = useState<VideoItem | null>(null);
 
@@ -213,29 +216,76 @@ export default function PortalApp() {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row">
-      {/* Left Sidebar */}
-      <aside className="w-full md:w-64 bg-slate-950 text-slate-200 flex flex-col justify-between shrink-0">
-        <div>
-          <div className="p-5 flex items-center gap-3 border-b border-slate-800/80">
-            <div className="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-md">
-              <Clapperboard className="w-5 h-5" />
+    <div className="min-h-screen md:h-screen w-full bg-slate-50 flex flex-col md:flex-row md:overflow-hidden">
+      {/* Mobile Top App Bar (shown only on < md screens) */}
+      <div className="md:hidden bg-slate-950 text-white px-4 py-3 flex items-center justify-between border-b border-slate-800 shrink-0 sticky top-0 z-40">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white shadow-sm">
+            <Clapperboard className="w-4 h-4" />
+          </div>
+          <div>
+            <h1 className="text-xs font-bold text-white tracking-tight">WEGROW Studio OS</h1>
+            <p className="text-[10px] text-slate-400">Marketing Operations</p>
+          </div>
+        </div>
+        <button
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          className="p-2 rounded-lg bg-slate-900 text-slate-200 hover:text-white cursor-pointer"
+          aria-label="Toggle Navigation"
+        >
+          {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+        </button>
+      </div>
+
+      {/* Backdrop for Mobile Drawer */}
+      {mobileMenuOpen && (
+        <div
+          className="md:hidden fixed inset-0 bg-slate-950/70 backdrop-blur-xs z-40"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* Left Sidebar - Fixed height to viewport on desktop, zero window scrolling needed */}
+      <aside
+        className={`w-full md:w-64 bg-slate-950 text-slate-200 flex flex-col justify-between shrink-0 border-r border-slate-800/80 z-50 md:z-40 transition-all duration-200 ${
+          mobileMenuOpen
+            ? "fixed inset-y-0 left-0 w-72 max-w-[85vw] flex h-full"
+            : "hidden md:flex md:h-screen md:sticky md:top-0"
+        }`}
+      >
+        <div className="flex flex-col min-h-0 flex-1">
+          <div className="p-5 flex items-center justify-between border-b border-slate-800/80 shrink-0">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-md">
+                <Clapperboard className="w-5 h-5" />
+              </div>
+              <div>
+                <h1 className="text-sm font-bold text-white tracking-tight">
+                  WEGROW Studio OS
+                </h1>
+                <p className="text-[11px] text-slate-400">Marketing Operations</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-sm font-bold text-white tracking-tight">
-                WEGROW Studio OS
-              </h1>
-              <p className="text-[11px] text-slate-400">Marketing Operations</p>
-            </div>
+            {mobileMenuOpen && (
+              <button
+                onClick={() => setMobileMenuOpen(false)}
+                className="md:hidden p-1.5 rounded-lg text-slate-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            )}
           </div>
 
-          <nav className="p-3 space-y-1">
+          <nav className="p-3 space-y-1 overflow-y-auto flex-1 min-h-0">
             {navItems.map((item) => {
               const active = activeTab === item.key;
               return (
                 <button
                   key={item.key}
-                  onClick={() => setActiveTab(item.key)}
+                  onClick={() => {
+                    setActiveTab(item.key);
+                    setMobileMenuOpen(false);
+                  }}
                   className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition cursor-pointer ${
                     active
                       ? "bg-indigo-600 text-white shadow-sm"
@@ -250,10 +300,13 @@ export default function PortalApp() {
           </nav>
         </div>
 
-        {/* Logged-in User Card */}
-        <div className="p-4 border-t border-slate-800/80 space-y-2.5">
+        {/* Logged-in User Card - permanently pinned to the bottom of the screen */}
+        <div className="p-4 border-t border-slate-800/80 space-y-2.5 shrink-0 bg-slate-950">
           <button
-            onClick={() => setProfileOpen(true)}
+            onClick={() => {
+              setProfileOpen(true);
+              setMobileMenuOpen(false);
+            }}
             className="w-full flex items-center gap-2.5 p-2 rounded-xl hover:bg-slate-900 text-left transition cursor-pointer group"
           >
             <span
@@ -283,10 +336,10 @@ export default function PortalApp() {
         </div>
       </aside>
 
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0">
+      {/* Main Content Area - scrolls independently on desktop */}
+      <div className="flex-1 flex flex-col min-w-0 md:h-screen md:overflow-y-auto">
         {/* Top Header Bar */}
-        <header className="bg-white border-b border-slate-200 px-6 py-3.5 flex flex-wrap items-center justify-between gap-3 sticky top-0 z-30">
+        <header className="bg-white border-b border-slate-200 px-6 py-3.5 flex flex-wrap items-center justify-between gap-3 sticky top-0 z-30 shrink-0">
           <div className="relative w-full sm:w-80">
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-2.5" />
             <input
