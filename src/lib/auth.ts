@@ -22,7 +22,7 @@ export async function getSessionUser(): Promise<UserRecord | null> {
 
   const db = await getDb();
   const res = await db.execute({
-    sql: `SELECT u.id, u.name, u.email, u.phone, u.role, u.avatar_color, u.active, u.created_at, s.expires_at
+    sql: `SELECT u.id, u.name, u.email, u.phone, u.role, u.avatar_color, u.active, u.org_id, u.created_at, s.expires_at
           FROM sessions s
           JOIN users u ON u.id = s.user_id
           WHERE s.token = ? AND u.active = 1`,
@@ -45,6 +45,7 @@ export async function getSessionUser(): Promise<UserRecord | null> {
     role: String(row.role) as UserRole,
     avatar_color: String(row.avatar_color),
     active: Number(row.active),
+    org_id: Number(row.org_id || 1),
     created_at: String(row.created_at),
   };
 }

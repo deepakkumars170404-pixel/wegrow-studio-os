@@ -32,6 +32,7 @@ export interface UserRecord {
   role: UserRole;
   avatar_color: string;
   active: number;
+  org_id: number;
   created_at: string;
 }
 
@@ -192,6 +193,25 @@ async function initSchemaAndSeed(db: Client): Promise<void> {
     await db.execute("ALTER TABLE videos ADD COLUMN org_id INTEGER NOT NULL DEFAULT 1");
   }
 
+  const hasReviewToken = videoColsRes.rows.some(
+    (col) => String(col.name) === "review_token"
+  );
+  if (!hasReviewToken) {
+    await db.execute("ALTER TABLE videos ADD COLUMN review_token TEXT NOT NULL DEFAULT ''");
+  }
+
+  const hasDeadlineAlertSent = videoColsRes.rows.some(
+    (col) => String(col.name) === "deadline_alert_sent"
+  );
+  if (!hasDeadlineAlertSent) {
+    await db.execute("ALTER TABLE videos ADD COLUMN deadline_alert_sent INTEGER NOT NULL DEFAULT 0");
+  }
+
+  // Populate any missing review tokens with random 16-char hex strings
+  await db.execute(
+    "UPDATE videos SET review_token = lower(hex(randomblob(8))) WHERE review_token = '' OR review_token IS NULL"
+  );
+
   // Migrate users table to add phone & org_id if missing
   const userColsRes = await db.execute("PRAGMA table_info(users)");
   const hasPhoneCol = userColsRes.rows.some(
@@ -215,6 +235,22 @@ async function initSchemaAndSeed(db: Client): Promise<void> {
   if (!hasClientOrgId) {
     await db.execute("ALTER TABLE clients ADD COLUMN org_id INTEGER NOT NULL DEFAULT 1");
   }
+
+  // Ensure organizations table exists for multi-tenant B2B SaaS
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS organizations (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      slug TEXT NOT NULL UNIQUE,
+      owner_email TEXT NOT NULL,
+      plan TEXT NOT NULL DEFAULT 'starter',
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )
+  `);
+  await db.execute({
+    sql: "INSERT OR IGNORE INTO organizations (id, name, slug, owner_email) VALUES (?, ?, ?, ?)",
+    args: [1, "WEGROW Studio", "wegrow", "thavabalan@wegrow.in"],
+  });
 
   // Ensure settings table exists
   await db.execute(`

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import crypto from "node:crypto";
 import { getDb } from "@/lib/db";
 import { getSessionUser } from "@/lib/auth";
 
@@ -9,20 +10,21 @@ export async function GET() {
   }
 
   const db = await getDb();
+  const orgId = user.org_id || 1;
 
-  let whereClause = "";
-  let args: (string | number)[] = [];
+  let whereClause = "WHERE v.org_id = ?";
+  const args: (string | number)[] = [orgId];
 
   if (user.role === "editor") {
     // Video editor only sees videos assigned to them AFTER shoot is completed (not 'script')
-    whereClause = "WHERE v.assigned_editor_id = ? AND v.stage != 'script'";
-    args = [user.id];
+    whereClause += " AND v.assigned_editor_id = ? AND v.stage != 'script'";
+    args.push(user.id);
   } else if (user.role === "cameraman") {
-    whereClause = "WHERE v.assigned_cameraman_id = ?";
-    args = [user.id];
+    whereClause += " AND v.assigned_cameraman_id = ?";
+    args.push(user.id);
   } else if (user.role === "content_writer" || user.role === "ai_content_creator") {
-    whereClause = "WHERE v.assigned_editor_id = ? OR v.assigned_writer_id = ?";
-    args = [user.id, user.id];
+    whereClause += " AND (v.assigned_editor_id = ? OR v.assigned_writer_id = ?)";
+    args.push(user.id, user.id);
   }
 
   const baseQuery = `
@@ -46,10 +48,7 @@ export async function GET() {
       v.id DESC
   `;
 
-  const res = args.length > 0
-    ? await db.execute({ sql: baseQuery, args })
-    : await db.execute(baseQuery);
-
+  const res = await db.execute({ sql: baseQuery, args });
   return NextResponse.json({ videos: res.rows });
 }
 
@@ -95,13 +94,17 @@ export async function POST(request: Request) {
       );
     }
 
+    const reviewToken = crypto.randomBytes(8).toString("hex");
+    const orgId = user.org_id || 1;
+
     const db = await getDb();
     const res = await db.execute({
       sql: `INSERT INTO videos (
         client_id, title, content_type, stage, priority,
         assigned_editor_id, assigned_writer_id, assigned_cameraman_id,
-        edit_deadline, posting_date, raw_link, final_link, live_url, notes, created_by
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        edit_deadline, posting_date, raw_link, final_link, live_url, notes,
+        review_token, org_id, created_by
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       args: [
         client_id,
         title,
@@ -117,6 +120,8 @@ export async function POST(request: Request) {
         final_link,
         live_url,
         notes,
+        reviewToken,
+        orgId,
         user.id,
       ],
     });

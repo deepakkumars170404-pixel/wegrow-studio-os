@@ -420,6 +420,35 @@ export default function VideoDrawer({
               </div>
             </div>
 
+            {video?.review_token && (
+              <div className="p-3 bg-indigo-50/70 border border-indigo-200 rounded-xl flex items-center justify-between gap-2 text-xs">
+                <div>
+                  <span className="font-bold text-indigo-900 block">Client Review Link:</span>
+                  <span className="text-indigo-600 text-[11px] font-mono">/review/{video.review_token}</span>
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(`${window.location.origin}/review/${video.review_token}`);
+                      alert("Client Review Link copied to clipboard!");
+                    }}
+                    className="px-2.5 py-1 bg-white border border-indigo-200 hover:bg-indigo-100 text-indigo-700 font-semibold rounded-lg shadow-2xs cursor-pointer"
+                  >
+                    Copy
+                  </button>
+                  <a
+                    href={`/review/${video.review_token}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg shadow-2xs flex items-center gap-1 cursor-pointer"
+                  >
+                    Open <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+              </div>
+            )}
+
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
                 Live Post URL (After Posting)

@@ -11,17 +11,20 @@ export async function GET() {
   }
 
   const db = await getDb();
-  const res = await db.execute(
-    `SELECT id, name, email, phone, role, avatar_color, active, created_at
+  const orgId = user.org_id || 1;
+  const res = await db.execute({
+    sql: `SELECT id, name, email, phone, role, avatar_color, active, org_id, created_at
      FROM users
+     WHERE org_id = ?
      ORDER BY CASE role
        WHEN 'owner' THEN 1
        WHEN 'admin' THEN 2
        WHEN 'manager' THEN 3
        WHEN 'editor' THEN 4
        ELSE 5
-     END, id ASC`
-  );
+     END, id ASC`,
+    args: [orgId],
+  });
 
   return NextResponse.json({ staff: res.rows });
 }
@@ -81,9 +84,10 @@ export async function POST(request: Request) {
 
     const phone = String(body.phone || "").trim();
     const color = AVATAR_COLORS[Math.floor(Math.random() * AVATAR_COLORS.length)];
+    const orgId = user.org_id || 1;
     const result = await db.execute({
-      sql: "INSERT INTO users (name, email, phone, password_hash, role, avatar_color) VALUES (?, ?, ?, ?, ?, ?)",
-      args: [name, email, phone, hashPassword(password), role, color],
+      sql: "INSERT INTO users (name, email, phone, password_hash, role, avatar_color, org_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      args: [name, email, phone, hashPassword(password), role, color, orgId],
     });
 
     const created = await db.execute({

@@ -17,7 +17,7 @@ export async function POST(request: Request) {
 
     const db = await getDb();
     const res = await db.execute({
-      sql: "SELECT id, name, email, password_hash, role, avatar_color, active, created_at FROM users WHERE lower(email) = ?",
+      sql: "SELECT id, name, email, password_hash, role, avatar_color, active, org_id, created_at FROM users WHERE lower(email) = ?",
       args: [email],
     });
     const user = res.rows[0];
@@ -45,6 +45,7 @@ export async function POST(request: Request) {
         role: String(user.role),
         avatar_color: String(user.avatar_color),
         active: Number(user.active),
+        org_id: Number(user.org_id || 1),
         created_at: String(user.created_at),
       },
     });

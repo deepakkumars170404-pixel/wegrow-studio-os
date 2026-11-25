@@ -16,6 +16,7 @@ import {
   Building2,
   Users,
   MessageSquare,
+  Share2,
 } from "lucide-react";
 import {
   createDeadlineAlertMessage,
@@ -520,6 +521,18 @@ export default function OwnerHubTab({
                             }
                             return null;
                           })()}
+
+                          {video.review_token && (
+                            <a
+                              href={`/review/${video.review_token}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              title="Open Client Approval Portal"
+                              className="p-1.5 text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg border border-indigo-200 transition"
+                            >
+                              <Share2 className="w-3.5 h-3.5" />
+                            </a>
+                          )}
 
                           <button
                             onClick={() => onOpenVideo(video)}

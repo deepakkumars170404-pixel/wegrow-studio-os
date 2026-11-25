@@ -9,17 +9,21 @@ export async function GET() {
   }
 
   const db = await getDb();
-  const res = await db.execute(
-    `SELECT c.*,
+  const orgId = user.org_id || 1;
+
+  const res = await db.execute({
+    sql: `SELECT c.*,
       COUNT(v.id) AS total_videos,
       SUM(CASE WHEN v.stage = 'posted' THEN 1 ELSE 0 END) AS posted_count,
       SUM(CASE WHEN v.stage IN ('scheduled', 'client_approval') THEN 1 ELSE 0 END) AS ready_count,
       SUM(CASE WHEN v.stage != 'posted' THEN 1 ELSE 0 END) AS pending_count
      FROM clients c
      LEFT JOIN videos v ON v.client_id = c.id
+     WHERE c.org_id = ?
      GROUP BY c.id
-     ORDER BY c.status ASC, c.name ASC`
-  );
+     ORDER BY c.status ASC, c.name ASC`,
+    args: [orgId],
+  });
 
   return NextResponse.json({ clients: res.rows });
 }
@@ -49,9 +53,10 @@ export async function POST(request: Request) {
     }
 
     const db = await getDb();
+    const orgId = user.org_id || 1;
     const res = await db.execute({
-      sql: "INSERT INTO clients (name, industry, monthly_target, brand_drive_url, guidelines) VALUES (?, ?, ?, ?, ?)",
-      args: [name, industry, monthly_target, brand_drive_url, guidelines],
+      sql: "INSERT INTO clients (name, industry, monthly_target, brand_drive_url, guidelines, org_id) VALUES (?, ?, ?, ?, ?, ?)",
+      args: [name, industry, monthly_target, brand_drive_url, guidelines, orgId],
     });
 
     const created = await db.execute({

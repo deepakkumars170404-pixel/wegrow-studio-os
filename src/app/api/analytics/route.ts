@@ -10,11 +10,12 @@ export async function GET() {
 
   const db = await getDb();
   const today = new Date().toISOString().slice(0, 10);
+  const orgId = user.org_id || 1;
 
-  // Fetch all videos, clients, and staff
+  // Fetch all videos, clients, and staff for this organization
   const [videosRes, clientsRes, staffRes] = await Promise.all([
-    db.execute(`
-      SELECT v.*,
+    db.execute({
+      sql: `SELECT v.*,
         c.name as client_name, c.monthly_target,
         e.name as editor_name, e.avatar_color as editor_color,
         cam.name as cameraman_name
@@ -22,9 +23,17 @@ export async function GET() {
       JOIN clients c ON c.id = v.client_id
       LEFT JOIN users e ON e.id = v.assigned_editor_id
       LEFT JOIN users cam ON cam.id = v.assigned_cameraman_id
-    `),
-    db.execute("SELECT * FROM clients WHERE status = 'active'"),
-    db.execute("SELECT * FROM users WHERE active = 1"),
+      WHERE v.org_id = ?`,
+      args: [orgId],
+    }),
+    db.execute({
+      sql: "SELECT * FROM clients WHERE status = 'active' AND org_id = ?",
+      args: [orgId],
+    }),
+    db.execute({
+      sql: "SELECT * FROM users WHERE active = 1 AND org_id = ?",
+      args: [orgId],
+    }),
   ]);
 
   const videos = videosRes.rows;

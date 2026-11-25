@@ -10,6 +10,7 @@ import {
   Loader2,
   ToggleLeft,
   ToggleRight,
+  Clock,
 } from "lucide-react";
 
 export default function SettingsTab() {
@@ -18,6 +19,31 @@ export default function SettingsTab() {
   const [testPhone, setTestPhone] = useState("");
   const [testSending, setTestSending] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; msg: string } | null>(null);
+
+  // Automated Deadline Scan State
+  const [cronScanning, setCronScanning] = useState(false);
+  const [cronResult, setCronResult] = useState<{ success: boolean; msg: string } | null>(null);
+
+  async function handleRunDeadlineScan() {
+    setCronScanning(true);
+    setCronResult(null);
+    try {
+      const res = await fetch("/api/cron/deadline-alerts", { method: "POST" });
+      const data = await res.json();
+      if (res.ok) {
+        setCronResult({
+          success: true,
+          msg: `Scan complete: Checked ${data.totalScanned} in-progress videos. Sent ${data.alertedCount} automated WhatsApp alert(s).`,
+        });
+      } else {
+        setCronResult({ success: false, msg: data.error || "Deadline scan failed." });
+      }
+    } catch {
+      setCronResult({ success: false, msg: "Network error during scan." });
+    } finally {
+      setCronScanning(false);
+    }
+  }
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -218,6 +244,38 @@ export default function SettingsTab() {
               }`}
             >
               {testResult.msg}
+            </p>
+          )}
+
+          {/* Automated 2-Hour Deadline Trigger */}
+          <div className="mt-4 pt-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h4 className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                <Clock className="w-3.5 h-3.5 text-indigo-600" />
+                Automated 2-Hour Approaching Deadline Scanner
+              </h4>
+              <p className="text-[11px] text-slate-500">
+                Runs on schedule via cron, or trigger manually to alert assigned editors of upcoming deadlines.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleRunDeadlineScan}
+              disabled={cronScanning}
+              className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-xs font-semibold rounded-xl flex items-center gap-1.5 shadow-2xs cursor-pointer"
+            >
+              {cronScanning ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Clock className="w-3.5 h-3.5" />}
+              Run Deadline Scan Now
+            </button>
+          </div>
+
+          {cronResult && (
+            <p
+              className={`text-xs font-semibold mt-2 ${
+                cronResult.success ? "text-indigo-700 bg-indigo-50 border border-indigo-200 p-2 rounded-lg" : "text-rose-600"
+              }`}
+            >
+              {cronResult.msg}
             </p>
           )}
         </div>

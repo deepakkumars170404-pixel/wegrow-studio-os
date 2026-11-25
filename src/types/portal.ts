@@ -8,6 +8,7 @@ export interface StaffMember {
   role: UserRole;
   avatar_color: string;
   active: number;
+  org_id?: number;
   created_at: string;
 }
 
@@ -47,6 +48,8 @@ export interface VideoItem {
   final_link: string;
   live_url: string;
   notes: string;
+  review_token?: string;
+  deadline_alert_sent?: number;
   created_at: string;
   updated_at: string;
 }
