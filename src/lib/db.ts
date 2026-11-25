@@ -9,7 +9,8 @@ export type UserRole =
   | "manager"
   | "editor"
   | "content_writer"
-  | "ai_content_creator";
+  | "ai_content_creator"
+  | "cameraman";
 
 export type VideoStage =
   | "script"
@@ -85,7 +86,7 @@ async function initSchemaAndSeed(db: Client): Promise<void> {
         name TEXT NOT NULL,
         email TEXT NOT NULL UNIQUE,
         password_hash TEXT NOT NULL,
-        role TEXT NOT NULL CHECK (role IN ('owner', 'admin', 'manager', 'editor', 'content_writer', 'ai_content_creator')),
+        role TEXT NOT NULL CHECK (role IN ('owner', 'admin', 'manager', 'editor', 'content_writer', 'ai_content_creator', 'cameraman')),
         avatar_color TEXT NOT NULL DEFAULT '#6366f1',
         active INTEGER NOT NULL DEFAULT 1,
         created_at TEXT NOT NULL DEFAULT (datetime('now'))
@@ -127,6 +128,7 @@ async function initSchemaAndSeed(db: Client): Promise<void> {
         priority TEXT NOT NULL DEFAULT 'normal' CHECK (priority IN ('urgent', 'high', 'normal')),
         assigned_editor_id INTEGER,
         assigned_writer_id INTEGER,
+        assigned_cameraman_id INTEGER,
         edit_deadline TEXT NOT NULL DEFAULT '',
         posting_date TEXT NOT NULL DEFAULT '',
         raw_link TEXT NOT NULL DEFAULT '',
@@ -138,11 +140,65 @@ async function initSchemaAndSeed(db: Client): Promise<void> {
         updated_at TEXT NOT NULL DEFAULT (datetime('now')),
         FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE,
         FOREIGN KEY (assigned_editor_id) REFERENCES users(id) ON DELETE SET NULL,
-        FOREIGN KEY (assigned_writer_id) REFERENCES users(id) ON DELETE SET NULL
+        FOREIGN KEY (assigned_writer_id) REFERENCES users(id) ON DELETE SET NULL,
+        FOREIGN KEY (assigned_cameraman_id) REFERENCES users(id) ON DELETE SET NULL
       )`,
     ],
     "write"
   );
+
+  // Migrate existing users table CHECK constraint if cameraman role is missing
+  const usersSchemaRes = await db.execute(
+    "SELECT sql FROM sqlite_master WHERE type='table' AND name='users'"
+  );
+  const usersSql = String(usersSchemaRes.rows[0]?.sql || "");
+  if (usersSql && !usersSql.includes("'cameraman'")) {
+    await db.batch(
+      [
+        `CREATE TABLE users_migrated (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL,
+          email TEXT NOT NULL UNIQUE,
+          password_hash TEXT NOT NULL,
+          role TEXT NOT NULL CHECK (role IN ('owner', 'admin', 'manager', 'editor', 'content_writer', 'ai_content_creator', 'cameraman')),
+          avatar_color TEXT NOT NULL DEFAULT '#6366f1',
+          active INTEGER NOT NULL DEFAULT 1,
+          created_at TEXT NOT NULL DEFAULT (datetime('now'))
+        )`,
+        `INSERT INTO users_migrated (id, name, email, password_hash, role, avatar_color, active, created_at)
+         SELECT id, name, email, password_hash, role, avatar_color, active, created_at FROM users`,
+        `DROP TABLE users`,
+        `ALTER TABLE users_migrated RENAME TO users`,
+      ],
+      "write"
+    );
+  }
+
+  // Migrate existing videos table to add assigned_cameraman_id if missing
+  const videoColsRes = await db.execute("PRAGMA table_info(videos)");
+  const hasCameramanCol = videoColsRes.rows.some(
+    (col) => String(col.name) === "assigned_cameraman_id"
+  );
+  if (!hasCameramanCol) {
+    await db.execute(
+      "ALTER TABLE videos ADD COLUMN assigned_cameraman_id INTEGER REFERENCES users(id) ON DELETE SET NULL"
+    );
+  }
+
+  // Ensure Pandeeswaran (Cameraman) exists in staff list
+  const pandeeswaranRes = await db.execute({
+    sql: "SELECT id FROM users WHERE lower(email) = ?",
+    args: ["pandeeswaran@wegrow.in"],
+  });
+  if (pandeeswaranRes.rows.length === 0) {
+    const userCountCheck = await db.execute("SELECT COUNT(*) as count FROM users");
+    if (Number(userCountCheck.rows[0]?.count ?? 0) > 0) {
+      await db.execute({
+        sql: "INSERT INTO users (name, email, password_hash, role, avatar_color) VALUES (?, ?, ?, ?, ?)",
+        args: ["Pandeeswaran", "pandeeswaran@wegrow.in", hashPassword("wegrow123"), "cameraman", "#0284c7"],
+      });
+    }
+  }
 
   const userCountRes = await db.execute("SELECT COUNT(*) as count FROM users");
   const userCount = Number(userCountRes.rows[0]?.count ?? 0);
@@ -168,6 +224,10 @@ async function initSchemaAndSeed(db: Client): Promise<void> {
       {
         sql: "INSERT INTO users (name, email, password_hash, role, avatar_color) VALUES (?, ?, ?, ?, ?)",
         args: ["Millar", "millar@wegrow.in", defaultPass, "ai_content_creator", "#059669"],
+      },
+      {
+        sql: "INSERT INTO users (name, email, password_hash, role, avatar_color) VALUES (?, ?, ?, ?, ?)",
+        args: ["Pandeeswaran", "pandeeswaran@wegrow.in", defaultPass, "cameraman", "#0284c7"],
       },
     ];
     await db.batch(seedUsers, "write");

@@ -73,7 +73,8 @@ export default function PortalApp() {
             if (
               data.user.role === "editor" ||
               data.user.role === "content_writer" ||
-              data.user.role === "ai_content_creator"
+              data.user.role === "ai_content_creator" ||
+              data.user.role === "cameraman"
             ) {
               setActiveTab("pipeline");
               setMyTasksOnly(true);
@@ -93,7 +94,8 @@ export default function PortalApp() {
     if (
       loggedInUser.role === "editor" ||
       loggedInUser.role === "content_writer" ||
-      loggedInUser.role === "ai_content_creator"
+      loggedInUser.role === "ai_content_creator" ||
+      loggedInUser.role === "cameraman"
     ) {
       setActiveTab("pipeline");
       setMyTasksOnly(true);
@@ -139,12 +141,14 @@ export default function PortalApp() {
   const canManageOps =
     user.role === "owner" || user.role === "admin" || user.role === "manager";
   const canManageStaff = user.role === "owner" || user.role === "admin";
-  const canCreateVideo = user.role !== "editor";
+  const canCreateVideo = user.role !== "editor" && user.role !== "cameraman";
 
   const visibleVideos = videos.filter((v) => {
     if (myTasksOnly) {
       const isMine =
-        v.assigned_editor_id === user.id || v.assigned_writer_id === user.id;
+        v.assigned_editor_id === user.id ||
+        v.assigned_writer_id === user.id ||
+        v.assigned_cameraman_id === user.id;
       if (!isMine) return false;
     }
     if (searchQuery.trim()) {
@@ -173,6 +177,8 @@ export default function PortalApp() {
       label:
         user.role === "editor"
           ? "My Editing Queue"
+          : user.role === "cameraman"
+          ? "My Shoot Queue"
           : user.role === "content_writer" || user.role === "ai_content_creator"
           ? "My Content Queue"
           : "Video Pipeline",
@@ -331,6 +337,7 @@ export default function PortalApp() {
               videos={visibleVideos}
               clients={clients}
               staff={staff}
+              userRole={user.role}
               selectedClientId={selectedClientId}
               onClientFilterChange={setSelectedClientId}
               onOpenVideo={(v) => {

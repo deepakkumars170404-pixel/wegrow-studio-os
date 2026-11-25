@@ -16,7 +16,7 @@ export async function PATCH(
   const db = await getDb();
 
   const existingRes = await db.execute({
-    sql: "SELECT id, assigned_editor_id, assigned_writer_id FROM videos WHERE id = ?",
+    sql: "SELECT id, assigned_editor_id, assigned_writer_id, assigned_cameraman_id FROM videos WHERE id = ?",
     args: [videoId],
   });
   const existing = existingRes.rows[0];
@@ -28,7 +28,8 @@ export async function PATCH(
   const isManagerOrAbove = canManageClientsAndAssign(user.role);
   const isAssigned =
     Number(existing.assigned_editor_id) === user.id ||
-    Number(existing.assigned_writer_id) === user.id;
+    Number(existing.assigned_writer_id) === user.id ||
+    Number(existing.assigned_cameraman_id) === user.id;
 
   if (!isManagerOrAbove && !isAssigned) {
     return NextResponse.json(
@@ -56,6 +57,8 @@ export async function PATCH(
       ] as const)
     : user.role === "editor"
     ? (["stage", "final_link", "notes"] as const)
+    : user.role === "cameraman"
+    ? (["stage", "raw_link", "notes"] as const)
     : (["title", "stage", "raw_link", "final_link", "notes"] as const);
 
   for (const field of allowedStringFields) {
@@ -78,6 +81,10 @@ export async function PATCH(
       updates.push("assigned_writer_id = ?");
       values.push(body.assigned_writer_id ? Number(body.assigned_writer_id) : null);
     }
+    if (body.assigned_cameraman_id !== undefined) {
+      updates.push("assigned_cameraman_id = ?");
+      values.push(body.assigned_cameraman_id ? Number(body.assigned_cameraman_id) : null);
+    }
   }
 
   values.push(videoId);
@@ -88,11 +95,13 @@ export async function PATCH(
 
   const updated = await db.execute({
     sql: `SELECT v.*, c.name AS client_name, c.industry AS client_industry,
-      e.name AS editor_name, e.avatar_color AS editor_color, w.name AS writer_name
+      e.name AS editor_name, e.avatar_color AS editor_color,
+      w.name AS writer_name, cam.name AS cameraman_name
      FROM videos v
      JOIN clients c ON c.id = v.client_id
      LEFT JOIN users e ON e.id = v.assigned_editor_id
      LEFT JOIN users w ON w.id = v.assigned_writer_id
+     LEFT JOIN users cam ON cam.id = v.assigned_cameraman_id
      WHERE v.id = ?`,
     args: [videoId],
   });

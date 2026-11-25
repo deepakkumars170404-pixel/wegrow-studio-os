@@ -38,6 +38,8 @@ export interface VideoItem {
   editor_color: string | null;
   assigned_writer_id: number | null;
   writer_name: string | null;
+  assigned_cameraman_id: number | null;
+  cameraman_name: string | null;
   edit_deadline: string;
   posting_date: string;
   raw_link: string;

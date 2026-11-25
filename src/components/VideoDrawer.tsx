@@ -29,7 +29,7 @@ export default function VideoDrawer({
 }: VideoDrawerProps) {
   const isManagerOrAbove =
     userRole === "owner" || userRole === "admin" || userRole === "manager";
-  const isEditorOnly = userRole === "editor";
+  const isEditorOrCameraman = userRole === "editor" || userRole === "cameraman";
   const [title, setTitle] = useState("");
   const [clientId, setClientId] = useState<number>(0);
   const [contentType, setContentType] = useState("Reel");
@@ -37,6 +37,7 @@ export default function VideoDrawer({
   const [priority, setPriority] = useState<VideoPriority>("normal");
   const [editorId, setEditorId] = useState<string>("");
   const [writerId, setWriterId] = useState<string>("");
+  const [cameramanId, setCameramanId] = useState<string>("");
   const [editDeadline, setEditDeadline] = useState("");
   const [postingDate, setPostingDate] = useState("");
   const [rawLink, setRawLink] = useState("");
@@ -57,6 +58,7 @@ export default function VideoDrawer({
       setPriority(video.priority);
       setEditorId(video.assigned_editor_id ? String(video.assigned_editor_id) : "");
       setWriterId(video.assigned_writer_id ? String(video.assigned_writer_id) : "");
+      setCameramanId(video.assigned_cameraman_id ? String(video.assigned_cameraman_id) : "");
       const normalizedDeadline = video.edit_deadline
         ? video.edit_deadline.includes("T")
           ? video.edit_deadline.slice(0, 16)
@@ -77,6 +79,7 @@ export default function VideoDrawer({
       setPriority("normal");
       setEditorId("");
       setWriterId("");
+      setCameramanId("");
       setEditDeadline(`${today}T18:00`);
       setPostingDate("");
       setRawLink("");
@@ -105,6 +108,16 @@ export default function VideoDrawer({
         s.role === "admin")
   );
 
+  const cameramen = staff.filter(
+    (s) =>
+      s.active &&
+      (s.role === "cameraman" || s.role === "manager" || s.role === "admin")
+  );
+  const drawerStages =
+    userRole === "editor"
+      ? VIDEO_STAGES.filter((s) => s.key !== "script")
+      : VIDEO_STAGES;
+
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     setError("");
@@ -118,6 +131,7 @@ export default function VideoDrawer({
         priority,
         assigned_editor_id: editorId ? Number(editorId) : null,
         assigned_writer_id: writerId ? Number(writerId) : null,
+        assigned_cameraman_id: cameramanId ? Number(cameramanId) : null,
         edit_deadline: editDeadline,
         posting_date: postingDate,
         raw_link: rawLink,
@@ -187,7 +201,7 @@ export default function VideoDrawer({
             <input
               type="text"
               required
-              disabled={isEditorOnly}
+              disabled={isEditorOrCameraman}
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g. HydraFacial Before & After Reel"
@@ -243,7 +257,7 @@ export default function VideoDrawer({
                 onChange={(e) => setStage(e.target.value as VideoStage)}
                 className="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl bg-white text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
               >
-                {VIDEO_STAGES.map((s) => (
+                {drawerStages.map((s) => (
                   <option key={s.key} value={s.key}>
                     {s.label}
                   </option>
@@ -306,6 +320,25 @@ export default function VideoDrawer({
                 ))}
               </select>
             </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
+              Assigned Cameraman (Shoot)
+            </label>
+            <select
+              disabled={!isManagerOrAbove}
+              value={cameramanId}
+              onChange={(e) => setCameramanId(e.target.value)}
+              className="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl bg-white text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:outline-none disabled:bg-slate-100"
+            >
+              <option value="">Unassigned</option>
+              {cameramen.map((cam) => (
+                <option key={cam.id} value={cam.id}>
+                  {cam.name}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

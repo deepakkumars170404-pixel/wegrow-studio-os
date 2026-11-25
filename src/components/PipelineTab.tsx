@@ -10,12 +10,13 @@ import {
   isDeadlineOverdue,
 } from "@/lib/constants";
 import type { ClientItem, StaffMember, VideoItem } from "@/types/portal";
-import type { VideoStage } from "@/lib/db";
+import type { UserRole, VideoStage } from "@/lib/db";
 
 interface PipelineTabProps {
   videos: VideoItem[];
   clients: ClientItem[];
   staff: StaffMember[];
+  userRole: UserRole;
   selectedClientId: number | "all";
   onClientFilterChange: (clientId: number | "all") => void;
   onOpenVideo: (video: VideoItem) => void;
@@ -26,6 +27,7 @@ export default function PipelineTab({
   videos,
   clients,
   staff,
+  userRole,
   selectedClientId,
   onClientFilterChange,
   onOpenVideo,
@@ -34,6 +36,11 @@ export default function PipelineTab({
   const [viewMode, setViewMode] = useState<"board" | "table">("board");
   const [stageFilter, setStageFilter] = useState<string>("all");
   const [editorFilter, setEditorFilter] = useState<string>("all");
+
+  const visibleStages =
+    userRole === "editor"
+      ? VIDEO_STAGES.filter((s) => s.key !== "script")
+      : VIDEO_STAGES;
 
   const today = new Date().toISOString().slice(0, 10);
   const editors = staff.filter((s) => s.active && (s.role === "editor" || s.role === "manager"));
@@ -88,7 +95,7 @@ export default function PipelineTab({
             className="px-3 py-1.5 text-xs font-medium border border-slate-300 rounded-xl bg-white text-slate-800"
           >
             <option value="all">All Stages</option>
-            {VIDEO_STAGES.map((s) => (
+            {visibleStages.map((s) => (
               <option key={s.key} value={s.key}>
                 {s.label}
               </option>
@@ -129,7 +136,7 @@ export default function PipelineTab({
       {/* Board View */}
       {viewMode === "board" ? (
         <div className="flex gap-4 overflow-x-auto pb-4">
-          {VIDEO_STAGES.map((stage) => {
+          {visibleStages.map((stage) => {
             const stageVideos = filtered.filter((v) => v.stage === stage.key);
             return (
               <div
@@ -204,7 +211,7 @@ export default function PipelineTab({
                             }
                             className="text-[10px] font-semibold border border-slate-200 rounded-lg px-1.5 py-0.5 bg-slate-50 text-slate-700 cursor-pointer"
                           >
-                            {VIDEO_STAGES.map((st) => (
+                            {visibleStages.map((st) => (
                               <option key={st.key} value={st.key}>
                                 {st.shortLabel}
                               </option>
@@ -274,7 +281,7 @@ export default function PipelineTab({
                           }
                           className={`text-[11px] font-semibold px-2.5 py-1 rounded-lg border cursor-pointer ${stageMeta.badgeClass}`}
                         >
-                          {VIDEO_STAGES.map((s) => (
+                          {visibleStages.map((s) => (
                             <option key={s.key} value={s.key}>
                               {s.label}
                             </option>

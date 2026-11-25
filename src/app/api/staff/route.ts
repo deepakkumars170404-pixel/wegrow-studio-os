@@ -58,6 +58,7 @@ export async function POST(request: Request) {
       "editor",
       "content_writer",
       "ai_content_creator",
+      "cameraman",
     ];
     if (!validRoles.includes(role)) {
       return NextResponse.json(

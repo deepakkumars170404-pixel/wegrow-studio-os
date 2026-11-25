@@ -14,6 +14,7 @@ const QUICK_ACCOUNTS = [
   { label: "Mareeswaran (Content)", email: "mareeswaran@wegrow.in", role: "Content Creator" },
   { label: "Rahul (Editor)", email: "rahul@wegrow.in", role: "Editor" },
   { label: "Millar (AI Creator)", email: "millar@wegrow.in", role: "AI Content Creator" },
+  { label: "Pandeeswaran (Cameraman)", email: "pandeeswaran@wegrow.in", role: "Cameraman" },
 ];
 
 export default function LoginView({ onSuccess }: LoginViewProps) {

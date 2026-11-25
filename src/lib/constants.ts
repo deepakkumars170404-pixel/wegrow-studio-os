@@ -121,6 +121,11 @@ export const ROLE_META: Record<
     badgeClass: "bg-emerald-100 text-emerald-800 border-emerald-200",
     description: "Generate AI videos, creatives & manage AI production pipeline",
   },
+  cameraman: {
+    label: "Cameraman",
+    badgeClass: "bg-sky-100 text-sky-800 border-sky-200",
+    description: "Handle video shoots, mark Shoot Done & upload raw footage",
+  },
 };
 
 export const CONTENT_TYPES = ["Reel", "YouTube", "Ad Creative", "Shorts", "Story"] as const;

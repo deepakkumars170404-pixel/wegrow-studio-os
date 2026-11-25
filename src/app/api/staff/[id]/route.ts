@@ -46,7 +46,7 @@ export async function PATCH(
   }
   if (
     body.role &&
-    ["admin", "manager", "editor", "content_writer", "ai_content_creator"].includes(body.role)
+    ["admin", "manager", "editor", "content_writer", "ai_content_creator", "cameraman"].includes(body.role)
   ) {
     updates.push("role = ?");
     values.push(body.role);

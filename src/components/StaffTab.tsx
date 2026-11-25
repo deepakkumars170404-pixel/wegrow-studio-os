@@ -116,7 +116,9 @@ export default function StaffTab({
                 const roleMeta = ROLE_META[m.role];
                 const assignedCount = videos.filter(
                   (v) =>
-                    (v.assigned_editor_id === m.id || v.assigned_writer_id === m.id) &&
+                    (v.assigned_editor_id === m.id ||
+                      v.assigned_writer_id === m.id ||
+                      v.assigned_cameraman_id === m.id) &&
                     v.stage !== "posted"
                 ).length;
 
@@ -149,6 +151,7 @@ export default function StaffTab({
                           <option value="editor">Video Editor</option>
                           <option value="content_writer">Content Creator</option>
                           <option value="ai_content_creator">AI Content Creator</option>
+                          <option value="cameraman">Cameraman</option>
                         </select>
                       ) : (
                         <span
@@ -261,6 +264,7 @@ export default function StaffTab({
                     <option value="editor">Video Editor</option>
                     <option value="content_writer">Content Creator</option>
                     <option value="ai_content_creator">AI Content Creator</option>
+                    <option value="cameraman">Cameraman</option>
                     <option value="manager">Manager</option>
                     <option value="admin">Admin</option>
                   </select>
