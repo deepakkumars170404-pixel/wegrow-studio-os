@@ -181,7 +181,14 @@ export default function PortalApp() {
           {
             key: "my_queue" as const,
             label:
-              user.role === "editor"
+              user.email.toLowerCase().includes("mareeswaran") ||
+              user.email.toLowerCase().includes("millar")
+                ? "Publishing & Live Queue"
+                : user.email.toLowerCase().includes("rajkumar")
+                ? "SkillCampus Pipeline"
+                : user.email.toLowerCase().includes("gopinath")
+                ? "Jobz Pipeline"
+                : user.role === "editor"
                 ? "My Editing Queue"
                 : user.role === "cameraman"
                 ? "My Shoot Queue"
@@ -494,6 +501,7 @@ export default function PortalApp() {
         clients={clients}
         staff={staff}
         userRole={user.role}
+        currentUser={user}
         canDelete={canManageOps}
         onClose={() => setDrawerOpen(false)}
         onSaved={fetchAllData}

@@ -15,6 +15,10 @@ export async function GET() {
   let whereClause = "WHERE v.org_id = ?";
   const args: (string | number)[] = [orgId];
 
+  const isPublisher =
+    user.email.toLowerCase().includes("mareeswaran") ||
+    user.email.toLowerCase().includes("millar");
+
   if (user.role === "editor") {
     // Video editor only sees videos assigned to them AFTER shoot is completed (not 'script')
     whereClause += " AND v.assigned_editor_id = ? AND v.stage != 'script'";
@@ -22,6 +26,11 @@ export async function GET() {
   } else if (user.role === "cameraman") {
     whereClause += " AND v.assigned_cameraman_id = ?";
     args.push(user.id);
+  } else if (isPublisher) {
+    // Publishers see videos ready to publish (scheduled, client_approval, internal_review, posted) or anything assigned to them
+    whereClause +=
+      " AND (v.stage IN ('scheduled', 'client_approval', 'internal_review', 'posted') OR v.assigned_writer_id = ? OR v.assigned_editor_id = ?)";
+    args.push(user.id, user.id);
   } else if (user.role === "content_writer" || user.role === "ai_content_creator") {
     whereClause += " AND (v.assigned_editor_id = ? OR v.assigned_writer_id = ?)";
     args.push(user.id, user.id);
@@ -68,6 +77,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const client_id = Number(body.client_id);
     const title = String(body.title || "").trim();
+    const team = String(body.team || "BSchool").trim();
     const content_type = String(body.content_type || "Reel").trim();
     const stage = String(body.stage || "script");
     const priority = String(body.priority || "normal");
@@ -103,8 +113,8 @@ export async function POST(request: Request) {
         client_id, title, content_type, stage, priority,
         assigned_editor_id, assigned_writer_id, assigned_cameraman_id,
         edit_deadline, posting_date, raw_link, final_link, live_url, notes,
-        review_token, org_id, created_by
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        review_token, org_id, team, created_by
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       args: [
         client_id,
         title,
@@ -122,6 +132,7 @@ export async function POST(request: Request) {
         notes,
         reviewToken,
         orgId,
+        team,
         user.id,
       ],
     });

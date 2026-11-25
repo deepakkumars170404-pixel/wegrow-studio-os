@@ -10,11 +10,13 @@ interface LoginViewProps {
 
 const QUICK_ACCOUNTS = [
   { label: "Thavabalan (Owner)", email: "thavabalan@wegrow.in", role: "Owner" },
-  { label: "Rajavalli (Manager)", email: "rajavalli@wegrow.in", role: "Manager" },
-  { label: "Mareeswaran (Content)", email: "mareeswaran@wegrow.in", role: "Content Creator" },
-  { label: "Rahul (Editor)", email: "rahul@wegrow.in", role: "Editor" },
-  { label: "Millar (AI Creator)", email: "millar@wegrow.in", role: "AI Content Creator" },
+  { label: "Rajavalli (BSchool)", email: "rajavalli@wegrow.in", role: "BSchool Lead" },
+  { label: "Rajkumar (SkillCampus)", email: "rajkumar@wegrow.in", role: "SkillCampus Lead" },
+  { label: "Gopinath (Jobz)", email: "gopinath@wegrow.in", role: "Jobz Lead" },
   { label: "Pandeeswaran (Cameraman)", email: "pandeeswaran@wegrow.in", role: "Cameraman" },
+  { label: "Rahul (Editor)", email: "rahul@wegrow.in", role: "Editor" },
+  { label: "Mareeswaran (Publisher)", email: "mareeswaran@wegrow.in", role: "Publisher" },
+  { label: "Millar (Publisher / AI)", email: "millar@wegrow.in", role: "Publisher / AI" },
 ];
 
 export default function LoginView({ onSuccess }: LoginViewProps) {

@@ -207,6 +207,13 @@ async function initSchemaAndSeed(db: Client): Promise<void> {
     await db.execute("ALTER TABLE videos ADD COLUMN deadline_alert_sent INTEGER NOT NULL DEFAULT 0");
   }
 
+  const hasTeamCol = videoColsRes.rows.some(
+    (col) => String(col.name) === "team"
+  );
+  if (!hasTeamCol) {
+    await db.execute("ALTER TABLE videos ADD COLUMN team TEXT NOT NULL DEFAULT 'BSchool'");
+  }
+
   // Populate any missing review tokens with random 16-char hex strings
   await db.execute(
     "UPDATE videos SET review_token = lower(hex(randomblob(8))) WHERE review_token = '' OR review_token IS NULL"
@@ -300,6 +307,30 @@ async function initSchemaAndSeed(db: Client): Promise<void> {
         args: ["Pandeeswaran", "pandeeswaran@wegrow.in", hashPassword("wegrow123"), "cameraman", "#0284c7"],
       });
     }
+  }
+
+  // Ensure Rajkumar (SkillCampus Content Lead) exists
+  const rajkumarRes = await db.execute({
+    sql: "SELECT id FROM users WHERE lower(email) = ?",
+    args: ["rajkumar@wegrow.in"],
+  });
+  if (rajkumarRes.rows.length === 0) {
+    await db.execute({
+      sql: "INSERT INTO users (name, email, password_hash, role, avatar_color, org_id) VALUES (?, ?, ?, ?, ?, ?)",
+      args: ["Rajkumar", "rajkumar@wegrow.in", hashPassword("wegrow123"), "content_writer", "#8b5cf6", 1],
+    });
+  }
+
+  // Ensure Gopinath (Jobz Content Lead) exists
+  const gopinathRes = await db.execute({
+    sql: "SELECT id FROM users WHERE lower(email) = ?",
+    args: ["gopinath@wegrow.in"],
+  });
+  if (gopinathRes.rows.length === 0) {
+    await db.execute({
+      sql: "INSERT INTO users (name, email, password_hash, role, avatar_color, org_id) VALUES (?, ?, ?, ?, ?, ?)",
+      args: ["Gopinath", "gopinath@wegrow.in", hashPassword("wegrow123"), "content_writer", "#06b6d4", 1],
+    });
   }
 
   const userCountRes = await db.execute("SELECT COUNT(*) as count FROM users");

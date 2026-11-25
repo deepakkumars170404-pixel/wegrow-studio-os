@@ -33,7 +33,11 @@ export async function PATCH(
     Number(existing.assigned_writer_id) === user.id ||
     Number(existing.assigned_cameraman_id) === user.id;
 
-  if (!isManagerOrAbove && !isAssigned) {
+  const isPublisher =
+    user.email.toLowerCase().includes("mareeswaran") ||
+    user.email.toLowerCase().includes("millar");
+
+  if (!isManagerOrAbove && !isAssigned && !isPublisher) {
     return NextResponse.json(
       { error: "You can only update videos assigned to you." },
       { status: 403 }
@@ -47,6 +51,7 @@ export async function PATCH(
   const allowedStringFields = isManagerOrAbove
     ? ([
         "title",
+        "team",
         "content_type",
         "stage",
         "priority",
@@ -57,11 +62,13 @@ export async function PATCH(
         "live_url",
         "notes",
       ] as const)
+    : isPublisher
+    ? (["stage", "live_url", "notes", "posting_date"] as const)
     : user.role === "editor"
     ? (["stage", "final_link", "notes"] as const)
     : user.role === "cameraman"
     ? (["stage", "raw_link", "notes"] as const)
-    : (["title", "stage", "raw_link", "final_link", "notes"] as const);
+    : (["title", "stage", "raw_link", "final_link", "notes", "live_url"] as const);
 
   for (const field of allowedStringFields) {
     if (typeof body[field] === "string") {

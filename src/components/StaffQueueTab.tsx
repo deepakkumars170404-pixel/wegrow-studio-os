@@ -14,8 +14,18 @@ import {
   Play,
   Upload,
   Plus,
+  Send,
+  RefreshCw,
+  Globe,
 } from "lucide-react";
-import { formatDeadline, isDeadlineOverdue, STAGE_MAP } from "@/lib/constants";
+import {
+  formatDeadline,
+  isDeadlineOverdue,
+  STAGE_MAP,
+  WEGROW_TEAMS,
+  TEAM_META,
+  type WegrowTeam,
+} from "@/lib/constants";
 import type { VideoItem, StaffMember } from "@/types/portal";
 import type { VideoStage } from "@/lib/db";
 
@@ -36,10 +46,11 @@ export default function StaffQueueTab({
   onRefresh,
   onNewVideo,
 }: StaffQueueTabProps) {
+  const [selectedTeam, setSelectedTeam] = useState<"all" | WegrowTeam>("all");
   const [filter, setFilter] = useState<"active" | "all" | "completed">("active");
   const [promptVideo, setPromptVideo] = useState<{
     id: number;
-    action: "submit_cut" | "submit_raw";
+    action: "submit_cut" | "submit_raw" | "submit_live" | "request_revision";
     title: string;
   } | null>(null);
   const [linkInput, setLinkInput] = useState("");
@@ -49,6 +60,11 @@ export default function StaffQueueTab({
   const isCameraman = user.role === "cameraman";
   const isWriter = user.role === "content_writer";
   const isAiCreator = user.role === "ai_content_creator";
+  const isPublisher =
+    user.email.toLowerCase().includes("mareeswaran") ||
+    user.email.toLowerCase().includes("millar");
+  const isSkillCampusLead = user.email.toLowerCase().includes("rajkumar");
+  const isJobzLead = user.email.toLowerCase().includes("gopinath");
 
   // Filter videos for the current staff member
   const roleFilteredVideos = videos.filter((v) => {
@@ -59,16 +75,36 @@ export default function StaffQueueTab({
     if (isCameraman) {
       return v.assigned_cameraman_id === user.id;
     }
+    if (isPublisher) {
+      // Publishers see approved videos ready for publishing OR assigned tasks
+      return (
+        ["scheduled", "client_approval", "internal_review", "posted"].includes(v.stage) ||
+        v.assigned_writer_id === user.id ||
+        v.assigned_editor_id === user.id
+      );
+    }
+    if (isSkillCampusLead) {
+      return (v.team || "BSchool") === "SkillCampus" || v.assigned_writer_id === user.id;
+    }
+    if (isJobzLead) {
+      return (v.team || "BSchool") === "Jobz" || v.assigned_writer_id === user.id;
+    }
     if (isWriter || isAiCreator) {
       return v.assigned_writer_id === user.id || v.assigned_editor_id === user.id;
     }
     return true;
   });
 
-  const activeTasks = roleFilteredVideos.filter((v) => v.stage !== "posted");
-  const completedTasks = roleFilteredVideos.filter((v) => v.stage === "posted");
+  // Apply 3-team filter
+  const teamFilteredVideos =
+    selectedTeam === "all"
+      ? roleFilteredVideos
+      : roleFilteredVideos.filter((v) => (v.team || "BSchool") === selectedTeam);
 
-  const displayedVideos = roleFilteredVideos.filter((v) => {
+  const activeTasks = teamFilteredVideos.filter((v) => v.stage !== "posted");
+  const completedTasks = teamFilteredVideos.filter((v) => v.stage === "posted");
+
+  const displayedVideos = teamFilteredVideos.filter((v) => {
     if (filter === "active") return v.stage !== "posted";
     if (filter === "completed") return v.stage === "posted";
     return true;
@@ -86,6 +122,12 @@ export default function StaffQueueTab({
       } else if (promptVideo.action === "submit_raw") {
         payload.raw_link = linkInput.trim();
         payload.stage = "raw_uploaded";
+      } else if (promptVideo.action === "submit_live") {
+        payload.live_url = linkInput.trim();
+        payload.stage = "posted";
+      } else if (promptVideo.action === "request_revision") {
+        payload.notes = linkInput.trim();
+        payload.stage = "editing";
       }
 
       await fetch(`/api/videos/${promptVideo.id}`, {
@@ -102,6 +144,32 @@ export default function StaffQueueTab({
     }
   }
 
+  const headerTitle = isPublisher
+    ? "🚀 Publishing & Social Media Operations"
+    : isSkillCampusLead
+    ? "💻 SkillCampus Content & Production Lead"
+    : isJobzLead
+    ? "💼 Jobz Content & Production Lead"
+    : isEditor
+    ? "🎬 Video Editing Workspace"
+    : isCameraman
+    ? "🎥 Cameraman Shoot Operations"
+    : isAiCreator
+    ? "🤖 AI Content Queue"
+    : "📝 Content & Scripts Queue";
+
+  const headerSubtitle = isPublisher
+    ? "Approved videos ready to publish across BSchool, SkillCampus, and Jobz. Post live and record URLs."
+    : isSkillCampusLead
+    ? "Manage scripts, review Rahul's edits, approve final cuts, and send to Mareeswaran / Millar for publishing."
+    : isJobzLead
+    ? "Manage scripts, review Rahul's edits, approve final cuts, and send to Mareeswaran / Millar for publishing."
+    : isEditor
+    ? "Videos ready to edit after camera shoot across all 3 teams. Keep edit deadlines on track!"
+    : isCameraman
+    ? "Shooting schedule across BSchool, SkillCampus, and Jobz. Mark shoot done when recording finishes."
+    : "Create scripts, hooks, and track video production progress.";
+
   return (
     <div className="space-y-5 max-w-5xl mx-auto">
       {/* Role Header Banner */}
@@ -111,7 +179,9 @@ export default function StaffQueueTab({
             className="w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-sm shrink-0"
             style={{ backgroundColor: user.avatar_color }}
           >
-            {isEditor ? (
+            {isPublisher ? (
+              <Globe className="w-6 h-6" />
+            ) : isEditor ? (
               <Film className="w-6 h-6" />
             ) : isCameraman ? (
               <Camera className="w-6 h-6" />
@@ -122,22 +192,8 @@ export default function StaffQueueTab({
             )}
           </div>
           <div>
-            <h1 className="text-base font-bold text-slate-900">
-              {isEditor
-                ? "My Editing Workspace"
-                : isCameraman
-                ? "My Shoot Schedule"
-                : isAiCreator
-                ? "My AI Content Queue"
-                : "My Content & Scripts Queue"}
-            </h1>
-            <p className="text-xs text-slate-500">
-              {isEditor
-                ? "Videos ready to edit after camera shoot. Keep edit deadlines on track!"
-                : isCameraman
-                ? "Videos assigned for shoot. Mark shoot done when recording finishes."
-                : "Create scripts, hooks, and track video production progress."}
-            </p>
+            <h1 className="text-base font-bold text-slate-900">{headerTitle}</h1>
+            <p className="text-xs text-slate-500">{headerSubtitle}</p>
           </div>
         </div>
 
@@ -181,10 +237,57 @@ export default function StaffQueueTab({
                   : "text-slate-600 hover:text-slate-900"
               }`}
             >
-              All ({roleFilteredVideos.length})
+              All ({teamFilteredVideos.length})
             </button>
           </div>
         </div>
+      </div>
+
+      {/* 3-Team Brand Filter Tabs in Staff Queue */}
+      <div className="flex items-center gap-1.5 overflow-x-auto bg-white p-2 rounded-2xl border border-slate-200 shadow-2xs">
+        <button
+          onClick={() => setSelectedTeam("all")}
+          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+            selectedTeam === "all"
+              ? "bg-slate-900 text-white shadow-xs"
+              : "bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200"
+          }`}
+        >
+          <span>🌐 All Teams</span>
+          <span
+            className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+              selectedTeam === "all" ? "bg-white/20 text-white" : "bg-slate-200 text-slate-700"
+            }`}
+          >
+            {roleFilteredVideos.length}
+          </span>
+        </button>
+
+        {WEGROW_TEAMS.map((t) => {
+          const isSelected = selectedTeam === t;
+          const count = roleFilteredVideos.filter((v) => (v.team || "BSchool") === t).length;
+          const meta = TEAM_META[t];
+          return (
+            <button
+              key={t}
+              onClick={() => setSelectedTeam(t)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                isSelected
+                  ? "bg-slate-900 text-white shadow-xs ring-2 ring-indigo-500/20"
+                  : "bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200"
+              }`}
+            >
+              <span>{meta.iconLabel}</span>
+              <span
+                className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                  isSelected ? "bg-white/20 text-white" : "bg-slate-200 text-slate-700"
+                }`}
+              >
+                {count}
+              </span>
+            </button>
+          );
+        })}
       </div>
 
       {/* Task Cards List */}
@@ -201,10 +304,19 @@ export default function StaffQueueTab({
               {/* Card Header */}
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="space-y-1">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-700 bg-indigo-50 px-2.5 py-0.5 rounded-md border border-indigo-100">
                       {video.client_name}
                     </span>
+                    {video.team && TEAM_META[video.team as WegrowTeam] && (
+                      <span
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded-md border inline-flex items-center gap-1 ${
+                          TEAM_META[video.team as WegrowTeam].badgeClass
+                        }`}
+                      >
+                        {TEAM_META[video.team as WegrowTeam].iconLabel}
+                      </span>
+                    )}
                     <span className="text-[10px] font-semibold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md">
                       {video.content_type}
                     </span>
@@ -266,12 +378,12 @@ export default function StaffQueueTab({
 
                 <div>
                   <span className="text-[11px] text-slate-500 font-medium block">
-                    Assigned Team:
+                    Assigned Crew:
                   </span>
                   <span className="text-slate-700 font-medium block mt-0.5 truncate">
-                    {video.cameraman_name ? `Cam: ${video.cameraman_name}` : "Cam: Unassigned"}
+                    {video.cameraman_name ? `Cam: ${video.cameraman_name}` : "Cam: Pandeeswaran"}
                     {" • "}
-                    {video.editor_name ? `Ed: ${video.editor_name}` : "Ed: Unassigned"}
+                    {video.editor_name ? `Ed: ${video.editor_name}` : "Ed: Rahul"}
                   </span>
                 </div>
               </div>
@@ -280,7 +392,7 @@ export default function StaffQueueTab({
               {video.notes && (
                 <p className="text-xs text-slate-600 italic bg-amber-50/50 p-2.5 rounded-lg border border-amber-100">
                   <strong className="not-italic text-amber-900 font-semibold mr-1">
-                    Notes / Hook:
+                    Notes / Revisions:
                   </strong>
                   {video.notes}
                 </p>
@@ -289,7 +401,7 @@ export default function StaffQueueTab({
               {/* Action Buttons Row */}
               <div className="flex flex-wrap items-center justify-between gap-3 pt-1 border-t border-slate-100">
                 {/* Links */}
-                <div className="flex items-center gap-3 text-xs">
+                <div className="flex items-center gap-3 text-xs flex-wrap">
                   {video.raw_link ? (
                     <a
                       href={video.raw_link}
@@ -298,10 +410,10 @@ export default function StaffQueueTab({
                       className="font-semibold text-sky-600 hover:text-sky-800 flex items-center gap-1 hover:underline"
                     >
                       <ExternalLink className="w-3.5 h-3.5" />
-                      Open Raw Footage
+                      Raw Footage
                     </a>
                   ) : (
-                    <span className="text-slate-400">No raw footage link</span>
+                    <span className="text-slate-400">No raw link</span>
                   )}
 
                   {video.final_link && (
@@ -315,10 +427,22 @@ export default function StaffQueueTab({
                       View Final Cut
                     </a>
                   )}
+
+                  {video.live_url && (
+                    <a
+                      href={video.live_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="font-bold text-emerald-600 hover:text-emerald-800 flex items-center gap-1 hover:underline"
+                    >
+                      <Globe className="w-3.5 h-3.5" />
+                      Live Post URL
+                    </a>
+                  )}
                 </div>
 
-                {/* Role Specific Quick Action */}
-                <div className="flex items-center gap-2">
+                {/* Role Specific Quick Actions */}
+                <div className="flex items-center gap-2 flex-wrap">
                   {/* CAMERAMAN ACTIONS */}
                   {isCameraman && (
                     <>
@@ -381,13 +505,13 @@ export default function StaffQueueTab({
 
                       {video.stage === "internal_review" && (
                         <span className="text-xs font-medium text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-200 flex items-center gap-1">
-                          <Clock className="w-3 h-3" /> Submitted for Review
+                          <Clock className="w-3 h-3" /> Submitted for Lead Review
                         </span>
                       )}
                     </>
                   )}
 
-                  {/* CONTENT WRITER / AI CREATOR ACTIONS */}
+                  {/* CONTENT WRITER / TEAM LEAD APPROVAL ACTIONS */}
                   {(isWriter || isAiCreator) && (
                     <>
                       {video.stage === "script" && (
@@ -396,6 +520,87 @@ export default function StaffQueueTab({
                           className="px-3 py-1.5 text-xs font-semibold text-violet-700 bg-violet-50 hover:bg-violet-100 rounded-xl border border-violet-200 cursor-pointer"
                         >
                           Script Ready for Shoot
+                        </button>
+                      )}
+
+                      {video.stage === "internal_review" && (
+                        <>
+                          <button
+                            onClick={() => onStageChange(video.id, "scheduled")}
+                            className="px-3 py-1.5 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl flex items-center gap-1 shadow-2xs cursor-pointer"
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            Approve for Publishing
+                          </button>
+                          <button
+                            onClick={() => onStageChange(video.id, "client_approval")}
+                            className="px-3 py-1.5 text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-xl border border-indigo-200 flex items-center gap-1 cursor-pointer"
+                          >
+                            <Send className="w-3.5 h-3.5" />
+                            Client Approval
+                          </button>
+                          <button
+                            onClick={() => {
+                              setPromptVideo({
+                                id: video.id,
+                                action: "request_revision",
+                                title: video.title,
+                              });
+                              setLinkInput(video.notes || "");
+                            }}
+                            className="px-3 py-1.5 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-xl border border-rose-200 flex items-center gap-1 cursor-pointer"
+                          >
+                            <RefreshCw className="w-3.5 h-3.5" />
+                            Revision
+                          </button>
+                        </>
+                      )}
+
+                      {video.stage === "client_approval" && (
+                        <>
+                          <button
+                            onClick={() => onStageChange(video.id, "scheduled")}
+                            className="px-3 py-1.5 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl flex items-center gap-1 shadow-2xs cursor-pointer"
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            Client Approved ➔ Post
+                          </button>
+                          <button
+                            onClick={() => {
+                              setPromptVideo({
+                                id: video.id,
+                                action: "request_revision",
+                                title: video.title,
+                              });
+                              setLinkInput(video.notes || "");
+                            }}
+                            className="px-3 py-1.5 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-xl border border-rose-200 flex items-center gap-1 cursor-pointer"
+                          >
+                            <RefreshCw className="w-3.5 h-3.5" />
+                            Client Changes
+                          </button>
+                        </>
+                      )}
+                    </>
+                  )}
+
+                  {/* PUBLISHER ACTIONS (Mareeswaran / Millar) */}
+                  {isPublisher && (
+                    <>
+                      {["scheduled", "client_approval", "internal_review"].includes(video.stage) && (
+                        <button
+                          onClick={() => {
+                            setPromptVideo({
+                              id: video.id,
+                              action: "submit_live",
+                              title: video.title,
+                            });
+                            setLinkInput(video.live_url || "");
+                          }}
+                          className="px-3.5 py-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl flex items-center gap-1.5 shadow-sm cursor-pointer"
+                        >
+                          <Globe className="w-3.5 h-3.5" />
+                          Mark as Live / Submit URL
                         </button>
                       )}
                     </>
@@ -418,17 +623,19 @@ export default function StaffQueueTab({
             <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto" />
             <h3 className="text-sm font-bold text-slate-800">No videos in this queue</h3>
             <p className="text-xs text-slate-500 max-w-sm mx-auto">
-              {isEditor
+              {isPublisher
+                ? "No approved videos waiting to be published right now. Once team leads approve final cuts, they will appear here for live posting!"
+                : isEditor
                 ? "You don't have any pending videos ready for editing. When Pandeeswaran marks a shoot done, it will appear here automatically."
                 : isCameraman
-                ? "No pending shoots assigned to you right now. Rajavalli will assign upcoming client shoots here."
+                ? "No pending shoots assigned to you right now. Team leads will assign upcoming client shoots here."
                 : "No videos found in this queue."}
             </p>
           </div>
         )}
       </div>
 
-      {/* Quick Link Input Modal */}
+      {/* Dynamic Link & Action Modal */}
       {promptVideo && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
           <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl border border-slate-200 space-y-4">
@@ -436,7 +643,11 @@ export default function StaffQueueTab({
               <h3 className="text-base font-bold text-slate-900">
                 {promptVideo.action === "submit_cut"
                   ? "Submit Final Cut Link"
-                  : "Upload Raw Footage Link"}
+                  : promptVideo.action === "submit_raw"
+                  ? "Upload Raw Footage Link"
+                  : promptVideo.action === "submit_live"
+                  ? "Mark Video as Live & Save URL"
+                  : "Request Revision from Rahul"}
               </h3>
               <p className="text-xs text-slate-500 line-clamp-1 mt-0.5">
                 {promptVideo.title}
@@ -446,16 +657,37 @@ export default function StaffQueueTab({
             <form onSubmit={handleLinkSubmit} className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Google Drive / Cloud Link *
+                  {promptVideo.action === "submit_cut"
+                    ? "Google Drive Final Cut Link *"
+                    : promptVideo.action === "submit_raw"
+                    ? "Google Drive Raw Footage Link *"
+                    : promptVideo.action === "submit_live"
+                    ? "Live Post URL (Instagram Reel / YouTube Short) *"
+                    : "Revision Feedback & Changes Required *"}
                 </label>
-                <input
-                  type="url"
-                  required
-                  value={linkInput}
-                  onChange={(e) => setLinkInput(e.target.value)}
-                  placeholder="https://drive.google.com/..."
-                  className="w-full px-3.5 py-2 text-sm border border-slate-300 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
+                {promptVideo.action === "request_revision" ? (
+                  <textarea
+                    required
+                    rows={3}
+                    value={linkInput}
+                    onChange={(e) => setLinkInput(e.target.value)}
+                    placeholder="Specify exact changes needed: e.g., trim intro hook, fix typography, adjust music volume..."
+                    className="w-full px-3.5 py-2 text-xs border border-slate-300 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                ) : (
+                  <input
+                    type="url"
+                    required
+                    value={linkInput}
+                    onChange={(e) => setLinkInput(e.target.value)}
+                    placeholder={
+                      promptVideo.action === "submit_live"
+                        ? "https://www.instagram.com/reel/..."
+                        : "https://drive.google.com/..."
+                    }
+                    className="w-full px-3.5 py-2 text-sm border border-slate-300 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                )}
               </div>
 
               <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
@@ -471,7 +703,13 @@ export default function StaffQueueTab({
                   disabled={submitting}
                   className="px-4 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl cursor-pointer"
                 >
-                  {submitting ? "Saving..." : "Save & Update Stage"}
+                  {submitting
+                    ? "Saving..."
+                    : promptVideo.action === "submit_live"
+                    ? "Publish & Mark Live"
+                    : promptVideo.action === "request_revision"
+                    ? "Send Revision Feedback"
+                    : "Save & Update Stage"}
                 </button>
               </div>
             </form>

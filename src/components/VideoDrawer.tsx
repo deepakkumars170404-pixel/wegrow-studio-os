@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { X, Trash2, ExternalLink, Save, Plus, Building2, Check } from "lucide-react";
-import { CONTENT_TYPES, VIDEO_STAGES } from "@/lib/constants";
+import { CONTENT_TYPES, VIDEO_STAGES, WEGROW_TEAMS, TEAM_META, type WegrowTeam } from "@/lib/constants";
 import type { ClientItem, StaffMember, VideoItem } from "@/types/portal";
 import type { UserRole, VideoPriority, VideoStage } from "@/lib/db";
 
@@ -12,6 +12,7 @@ interface VideoDrawerProps {
   clients: ClientItem[];
   staff: StaffMember[];
   userRole: UserRole;
+  currentUser?: StaffMember;
   canDelete: boolean;
   onClose: () => void;
   onSaved: () => void;
@@ -23,6 +24,7 @@ export default function VideoDrawer({
   clients,
   staff,
   userRole,
+  currentUser,
   canDelete,
   onClose,
   onSaved,
@@ -30,6 +32,7 @@ export default function VideoDrawer({
   const isManagerOrAbove =
     userRole === "owner" || userRole === "admin" || userRole === "manager";
   const isEditorOrCameraman = userRole === "editor" || userRole === "cameraman";
+  const [team, setTeam] = useState<WegrowTeam>("BSchool");
   const [title, setTitle] = useState("");
   const [clientId, setClientId] = useState<number>(0);
   const [contentType, setContentType] = useState("Reel");
@@ -52,10 +55,34 @@ export default function VideoDrawer({
   const [newClientName, setNewClientName] = useState("");
   const [creatingClient, setCreatingClient] = useState(false);
 
+  function handleSelectTeam(newTeam: WegrowTeam) {
+    setTeam(newTeam);
+    // Auto-assign Pandeeswaran as cameraman for all 3 teams!
+    const pandeeswaran = staff.find((s) => s.email.toLowerCase().includes("pandeeswaran"));
+    if (pandeeswaran) setCameramanId(String(pandeeswaran.id));
+
+    // Auto-assign Rahul as editor for all 3 teams!
+    const rahul = staff.find((s) => s.email.toLowerCase().includes("rahul"));
+    if (rahul) setEditorId(String(rahul.id));
+
+    // Auto-assign team-specific Content Creator / Reviewer
+    if (newTeam === "BSchool") {
+      const rajavalli = staff.find((s) => s.email.toLowerCase().includes("rajavalli"));
+      if (rajavalli) setWriterId(String(rajavalli.id));
+    } else if (newTeam === "SkillCampus") {
+      const rajkumar = staff.find((s) => s.email.toLowerCase().includes("rajkumar"));
+      if (rajkumar) setWriterId(String(rajkumar.id));
+    } else if (newTeam === "Jobz") {
+      const gopinath = staff.find((s) => s.email.toLowerCase().includes("gopinath"));
+      if (gopinath) setWriterId(String(gopinath.id));
+    }
+  }
+
   useEffect(() => {
     if (!open) return;
     setError("");
     if (video) {
+      setTeam((video.team as WegrowTeam) || "BSchool");
       setTitle(video.title);
       setClientId(video.client_id);
       setIsAddingNewClient(false);
@@ -86,17 +113,23 @@ export default function VideoDrawer({
       setContentType("Reel");
       setStage("script");
       setPriority("normal");
-      setEditorId("");
-      setWriterId("");
-      setCameramanId("");
       setEditDeadline(`${today}T18:00`);
       setPostingDate("");
       setRawLink("");
       setFinalLink("");
       setLiveUrl("");
       setNotes("");
+
+      // Apply initial smart default team assignment
+      let defaultTeam: WegrowTeam = "BSchool";
+      if (currentUser?.email?.toLowerCase().includes("rajkumar")) {
+        defaultTeam = "SkillCampus";
+      } else if (currentUser?.email?.toLowerCase().includes("gopinath")) {
+        defaultTeam = "Jobz";
+      }
+      handleSelectTeam(defaultTeam);
     }
-  }, [open, video, clients]);
+  }, [open, video, clients, currentUser]);
 
   async function handleQuickCreateClient() {
     const cleanName = newClientName.trim();
@@ -190,6 +223,7 @@ export default function VideoDrawer({
       const payload = {
         client_id: finalClientId,
         title,
+        team,
         content_type: contentType,
         stage,
         priority,
@@ -258,6 +292,37 @@ export default function VideoDrawer({
         </div>
 
         <form onSubmit={handleSave} className="flex-1 overflow-y-auto p-6 space-y-4">
+          {/* Production Team / Brand Selector */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+              Production Team / Brand *
+            </label>
+            <div className="grid grid-cols-3 gap-2">
+              {WEGROW_TEAMS.map((t) => {
+                const isSelected = team === t;
+                const meta = TEAM_META[t];
+                return (
+                  <button
+                    key={t}
+                    type="button"
+                    disabled={isEditorOrCameraman}
+                    onClick={() => handleSelectTeam(t)}
+                    className={`py-2 px-3 rounded-xl border text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                      isSelected
+                        ? "bg-slate-900 border-slate-900 text-white shadow-sm ring-2 ring-indigo-500/20"
+                        : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
+                    }`}
+                  >
+                    <span>{meta.iconLabel}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-[11px] text-slate-500 mt-1">
+              Flow: <span className="font-semibold text-slate-700">{TEAM_META[team].leadName} (Script)</span> ➔ <span className="font-semibold text-slate-700">Pandeeswaran (Shoot)</span> ➔ <span className="font-semibold text-slate-700">Rahul (Edit)</span> ➔ <span className="font-semibold text-slate-700">{TEAM_META[team].leadName} (Approval)</span> ➔ <span className="font-semibold text-slate-700">Publish</span>
+            </p>
+          </div>
+
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">
               Video Title *

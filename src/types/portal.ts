@@ -48,6 +48,7 @@ export interface VideoItem {
   final_link: string;
   live_url: string;
   notes: string;
+  team: "BSchool" | "SkillCampus" | "Jobz";
   review_token?: string;
   deadline_alert_sent?: number;
   created_at: string;

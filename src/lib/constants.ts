@@ -130,6 +130,36 @@ export const ROLE_META: Record<
 
 export const CONTENT_TYPES = ["Reel", "YouTube", "Ad Creative", "Shorts", "Story"] as const;
 
+export const WEGROW_TEAMS = ["BSchool", "SkillCampus", "Jobz"] as const;
+export type WegrowTeam = (typeof WEGROW_TEAMS)[number];
+
+export const TEAM_META: Record<
+  WegrowTeam,
+  { label: string; badgeClass: string; iconLabel: string; leadName: string; leadRole: string }
+> = {
+  BSchool: {
+    label: "BSchool",
+    badgeClass: "bg-indigo-50 text-indigo-700 border-indigo-200",
+    iconLabel: "🎓 BSchool",
+    leadName: "Rajavalli",
+    leadRole: "Content Creator",
+  },
+  SkillCampus: {
+    label: "SkillCampus",
+    badgeClass: "bg-purple-50 text-purple-700 border-purple-200",
+    iconLabel: "💻 SkillCampus",
+    leadName: "Rajkumar",
+    leadRole: "Content Creator",
+  },
+  Jobz: {
+    label: "Jobz",
+    badgeClass: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    iconLabel: "💼 Jobz",
+    leadName: "Gopinath",
+    leadRole: "Content Writer",
+  },
+};
+
 export function formatDeadline(value: string): string {
   if (!value) return "No deadline";
   if (value.includes("T")) {

@@ -29,6 +29,9 @@ import {
   PRIORITY_META,
   STAGE_MAP,
   VIDEO_STAGES,
+  WEGROW_TEAMS,
+  TEAM_META,
+  type WegrowTeam,
 } from "@/lib/constants";
 import type { ClientItem, StaffMember, VideoItem } from "@/types/portal";
 import type { VideoStage } from "@/lib/db";
@@ -53,27 +56,34 @@ export default function OwnerHubTab({
   onStageChange,
   onNewVideo,
 }: OwnerHubTabProps) {
+  const [selectedTeam, setSelectedTeam] = useState<"all" | WegrowTeam>("all");
   const [quickFilter, setQuickFilter] = useState<QuickFilter>("all");
   const [selectedClientId, setSelectedClientId] = useState<number | "all">("all");
   const [selectedStaffId, setSelectedStaffId] = useState<number | "all">("all");
   const [viewMode, setViewMode] = useState<"table" | "board">("table");
 
+  // Filter by team first
+  const teamVideos =
+    selectedTeam === "all"
+      ? videos
+      : videos.filter((v) => (v.team || "BSchool") === selectedTeam);
+
   // Summary counts
-  const waitingShoot = videos.filter((v) => v.stage === "script");
-  const inEditing = videos.filter((v) =>
+  const waitingShoot = teamVideos.filter((v) => v.stage === "script");
+  const inEditing = teamVideos.filter((v) =>
     ["shoot_done", "raw_uploaded", "editing"].includes(v.stage)
   );
-  const inApproval = videos.filter((v) =>
+  const inApproval = teamVideos.filter((v) =>
     ["internal_review", "client_approval", "scheduled"].includes(v.stage)
   );
-  const overdueOrUrgent = videos.filter(
+  const overdueOrUrgent = teamVideos.filter(
     (v) =>
       v.stage !== "posted" &&
       (v.priority === "urgent" || isDeadlineDueTodayOrOverdue(v.edit_deadline, v.stage))
   );
 
   // Filtered videos
-  const filteredVideos = videos.filter((v) => {
+  const filteredVideos = teamVideos.filter((v) => {
     // Quick metric box filter
     if (quickFilter === "shoot" && v.stage !== "script") return false;
     if (
@@ -107,7 +117,68 @@ export default function OwnerHubTab({
   });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
+      {/* 3-Team Brand Filter Tabs */}
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-2.5 rounded-2xl border border-slate-200 shadow-2xs">
+        <div className="flex items-center gap-1.5 overflow-x-auto">
+          <button
+            onClick={() => setSelectedTeam("all")}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
+              selectedTeam === "all"
+                ? "bg-slate-900 text-white shadow-xs"
+                : "bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200"
+            }`}
+          >
+            <span>🌐 All Teams</span>
+            <span
+              className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                selectedTeam === "all" ? "bg-white/20 text-white" : "bg-slate-200 text-slate-700"
+              }`}
+            >
+              {videos.length}
+            </span>
+          </button>
+
+          {WEGROW_TEAMS.map((t) => {
+            const isSelected = selectedTeam === t;
+            const count = videos.filter((v) => (v.team || "BSchool") === t).length;
+            const meta = TEAM_META[t];
+            return (
+              <button
+                key={t}
+                onClick={() => setSelectedTeam(t)}
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
+                  isSelected
+                    ? "bg-slate-900 text-white shadow-xs ring-2 ring-indigo-500/20"
+                    : "bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200"
+                }`}
+              >
+                <span>{meta.iconLabel}</span>
+                <span
+                  className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                    isSelected ? "bg-white/20 text-white" : "bg-slate-200 text-slate-700"
+                  }`}
+                >
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {selectedTeam !== "all" && (
+          <div className="text-[11px] text-slate-500 hidden sm:flex items-center gap-1.5 pr-2">
+            <span>Lead:</span>
+            <strong className="text-slate-800 font-semibold">{TEAM_META[selectedTeam].leadName}</strong>
+            <span>•</span>
+            <span>Cam:</span>
+            <strong className="text-slate-800 font-semibold">Pandeeswaran</strong>
+            <span>•</span>
+            <span>Editor:</span>
+            <strong className="text-slate-800 font-semibold">Rahul</strong>
+          </div>
+        )}
+      </div>
       {/* 4 Clickable Quick-Filter Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Waiting for Shoot */}
@@ -375,9 +446,20 @@ export default function OwnerHubTab({
                     >
                       {/* Client & Title */}
                       <td className="py-3.5 px-4 max-w-xs">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md inline-block mb-1">
-                          {video.client_name}
-                        </span>
+                        <div className="flex flex-wrap items-center gap-1.5 mb-1">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md inline-block">
+                            {video.client_name}
+                          </span>
+                          {video.team && TEAM_META[video.team as WegrowTeam] && (
+                            <span
+                              className={`text-[10px] font-bold px-2 py-0.5 rounded-md border inline-flex items-center gap-1 ${
+                                TEAM_META[video.team as WegrowTeam].badgeClass
+                              }`}
+                            >
+                              {TEAM_META[video.team as WegrowTeam].iconLabel}
+                            </span>
+                          )}
+                        </div>
                         <p className="font-bold text-slate-900 leading-snug">
                           {video.title}
                         </p>
@@ -584,10 +666,19 @@ export default function OwnerHubTab({
                       onClick={() => onOpenVideo(v)}
                       className="bg-white p-3.5 rounded-xl border border-slate-200 hover:border-indigo-300 hover:shadow-sm transition cursor-pointer space-y-2"
                     >
-                      <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center justify-between gap-1.5 flex-wrap">
                         <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md">
                           {v.client_name}
                         </span>
+                        {v.team && TEAM_META[v.team as WegrowTeam] && (
+                          <span
+                            className={`text-[9px] font-bold px-1.5 py-0.2 rounded border ${
+                              TEAM_META[v.team as WegrowTeam].badgeClass
+                            }`}
+                          >
+                            {TEAM_META[v.team as WegrowTeam].iconLabel}
+                          </span>
+                        )}
                         <span
                           className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${PRIORITY_META[v.priority].badgeClass}`}
                         >
