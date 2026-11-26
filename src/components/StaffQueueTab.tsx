@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Video,
   Film,
@@ -20,6 +20,7 @@ import {
   Share2,
   Copy,
   MessageSquare,
+  X,
 } from "lucide-react";
 import {
   formatDeadline,
@@ -55,9 +56,15 @@ export default function StaffQueueTab({
     id: number;
     action: "submit_cut" | "submit_raw" | "submit_live" | "request_revision";
     title: string;
+    isRevision?: boolean;
+    existingNotes?: string;
   } | null>(null);
   const [linkInput, setLinkInput] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  // Revision popup alert state for Rahul (editor)
+  const [activeRevisionAlert, setActiveRevisionAlert] = useState<VideoItem | null>(null);
+  const [dismissedAlertIds, setDismissedAlertIds] = useState<number[]>([]);
 
   const isEditor = user.role === "editor";
   const isCameraman = user.role === "cameraman";
@@ -110,6 +117,24 @@ export default function StaffQueueTab({
     (v) => v.stage === "scheduled" && v.notes && v.notes.includes("[Client Approved")
   );
 
+  // Videos assigned to Rahul that have changes requested (Internal or Client)
+  const revisionVideos = teamFilteredVideos.filter(
+    (v) =>
+      v.stage === "editing" &&
+      v.notes &&
+      (v.notes.includes("[Internal Revision") || v.notes.includes("[Client Revision"))
+  );
+
+  // Trigger popup alert for Rahul when he opens his workspace and has revision requests
+  useEffect(() => {
+    if (isEditor && revisionVideos.length > 0) {
+      const nextAlert = revisionVideos.find((v) => !dismissedAlertIds.includes(v.id));
+      if (nextAlert && (!activeRevisionAlert || activeRevisionAlert.id !== nextAlert.id)) {
+        setActiveRevisionAlert(nextAlert);
+      }
+    }
+  }, [isEditor, revisionVideos, dismissedAlertIds, activeRevisionAlert]);
+
   const displayedVideos = teamFilteredVideos.filter((v) => {
     if (filter === "active") return v.stage !== "posted";
     if (filter === "completed") return v.stage === "posted";
@@ -125,6 +150,11 @@ export default function StaffQueueTab({
       if (promptVideo.action === "submit_cut") {
         payload.final_link = linkInput.trim();
         payload.stage = "internal_review";
+        if (promptVideo.isRevision) {
+          const nowStr = new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" });
+          const existing = promptVideo.existingNotes || "";
+          payload.notes = `🎬 [Revised Cut Submitted by Rahul on ${nowStr}]\n${existing}`.trim();
+        }
       } else if (promptVideo.action === "submit_raw") {
         payload.raw_link = linkInput.trim();
         payload.stage = "raw_uploaded";
@@ -132,7 +162,9 @@ export default function StaffQueueTab({
         payload.live_url = linkInput.trim();
         payload.stage = "posted";
       } else if (promptVideo.action === "request_revision") {
-        payload.notes = linkInput.trim();
+        const nowStr = new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" });
+        const existing = promptVideo.existingNotes || "";
+        payload.notes = `⚠️ [Internal Revision by ${user.name} on ${nowStr}]: ${linkInput.trim()}\n${existing}`.trim();
         payload.stage = "editing";
       }
 
@@ -594,17 +626,34 @@ export default function StaffQueueTab({
                       {video.stage === "editing" && (
                         <button
                           onClick={() => {
+                            const isRev = Boolean(
+                              video.notes &&
+                                (video.notes.includes("[Internal Revision") ||
+                                  video.notes.includes("[Client Revision"))
+                            );
                             setPromptVideo({
                               id: video.id,
                               action: "submit_cut",
                               title: video.title,
+                              isRevision: isRev,
+                              existingNotes: video.notes || "",
                             });
                             setLinkInput(video.final_link || "");
                           }}
-                          className="px-3.5 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl flex items-center gap-1.5 shadow-xs cursor-pointer"
+                          className={`px-3.5 py-1.5 text-xs font-bold text-white rounded-xl flex items-center gap-1.5 shadow-xs cursor-pointer ${
+                            video.notes &&
+                            (video.notes.includes("[Internal Revision") ||
+                              video.notes.includes("[Client Revision"))
+                              ? "bg-rose-600 hover:bg-rose-700 animate-pulse"
+                              : "bg-indigo-600 hover:bg-indigo-700"
+                          }`}
                         >
                           <Upload className="w-3.5 h-3.5" />
-                          Submit Final Cut
+                          {video.notes &&
+                          (video.notes.includes("[Internal Revision") ||
+                            video.notes.includes("[Client Revision"))
+                            ? "Submit Revised Cut"
+                            : "Submit Final Cut"}
                         </button>
                       )}
 
@@ -650,8 +699,9 @@ export default function StaffQueueTab({
                                 id: video.id,
                                 action: "request_revision",
                                 title: video.title,
+                                existingNotes: video.notes || "",
                               });
-                              setLinkInput(video.notes || "");
+                              setLinkInput("");
                             }}
                             className="px-3 py-1.5 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-xl border border-rose-200 flex items-center gap-1 cursor-pointer"
                           >
@@ -676,8 +726,9 @@ export default function StaffQueueTab({
                                 id: video.id,
                                 action: "request_revision",
                                 title: video.title,
+                                existingNotes: video.notes || "",
                               });
-                              setLinkInput(video.notes || "");
+                              setLinkInput("");
                             }}
                             className="px-3 py-1.5 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-xl border border-rose-200 flex items-center gap-1 cursor-pointer"
                           >
@@ -818,6 +869,124 @@ export default function StaffQueueTab({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Rahul Revision Alert Popup Modal */}
+      {isEditor && activeRevisionAlert && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-xs p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl w-full max-w-lg p-6 shadow-2xl border-2 border-rose-300 space-y-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-rose-100 border border-rose-200 flex items-center justify-center text-rose-600 shrink-0 text-xl shadow-xs">
+                  🚨
+                </div>
+                <div>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-rose-700 bg-rose-100/80 px-2.5 py-0.5 rounded-full border border-rose-200">
+                      Revision Requested
+                    </span>
+                    <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md">
+                      {activeRevisionAlert.team}
+                    </span>
+                  </div>
+                  <h3 className="text-base font-extrabold text-slate-900 mt-1">
+                    Attention Rahul: Changes Needed!
+                  </h3>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setDismissedAlertIds((prev) => [...prev, activeRevisionAlert.id]);
+                  setActiveRevisionAlert(null);
+                }}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200/80 space-y-1">
+              <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                Video Details:
+              </p>
+              <p className="text-sm font-bold text-slate-900 leading-snug">
+                {activeRevisionAlert.title}
+              </p>
+              <p className="text-xs text-indigo-700 font-semibold">
+                Client: {activeRevisionAlert.client_name} • Format: {activeRevisionAlert.content_type}
+              </p>
+            </div>
+
+            {/* Changes Required Box */}
+            <div className="bg-rose-50/90 border-2 border-rose-200 rounded-2xl p-4 space-y-1.5">
+              <div className="flex items-center gap-1.5 text-rose-900 text-xs font-bold">
+                <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                <span>
+                  {activeRevisionAlert.notes?.includes("[Client Revision")
+                    ? "Client Requested Changes:"
+                    : "Team Lead Requested Changes:"}
+                </span>
+              </div>
+              <p className="text-xs text-rose-950 font-medium whitespace-pre-wrap leading-relaxed bg-white/80 p-3 rounded-xl border border-rose-100">
+                {activeRevisionAlert.notes
+                  ?.split("\n")
+                  .find(
+                    (line) =>
+                      line.includes("[Internal Revision") || line.includes("[Client Revision")
+                  ) || activeRevisionAlert.notes}
+              </p>
+            </div>
+
+            {activeRevisionAlert.final_link && (
+              <div className="text-xs flex items-center justify-between p-2.5 bg-slate-100 rounded-xl">
+                <span className="text-slate-500 font-medium">Previous Cut:</span>
+                <a
+                  href={activeRevisionAlert.final_link}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 hover:underline"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  Open Previous Google Drive Cut
+                </a>
+              </div>
+            )}
+
+            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => {
+                  setDismissedAlertIds((prev) => [...prev, activeRevisionAlert.id]);
+                  setActiveRevisionAlert(null);
+                }}
+                className="px-4 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl cursor-pointer"
+              >
+                Acknowledge & Start Editing
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const targetVideo = activeRevisionAlert;
+                  setDismissedAlertIds((prev) => [...prev, targetVideo.id]);
+                  setActiveRevisionAlert(null);
+                  setPromptVideo({
+                    id: targetVideo.id,
+                    action: "submit_cut",
+                    title: targetVideo.title,
+                    isRevision: true,
+                    existingNotes: targetVideo.notes || "",
+                  });
+                  setLinkInput(targetVideo.final_link || "");
+                }}
+                className="px-4 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-xl shadow-sm flex items-center gap-1.5 cursor-pointer"
+              >
+                <Upload className="w-3.5 h-3.5" />
+                Submit Revised Cut Link
+              </button>
+            </div>
           </div>
         </div>
       )}

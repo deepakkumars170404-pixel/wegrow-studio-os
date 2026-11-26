@@ -2,7 +2,11 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { canManageClientsAndAssign, getSessionUser } from "@/lib/auth";
 import { formatDeadline } from "@/lib/constants";
-import { createShootDoneAlertMessage, sendWhatsAppApi } from "@/lib/whatsapp";
+import {
+  createShootDoneAlertMessage,
+  createClientRevisionAlertMessage,
+  sendWhatsAppApi,
+} from "@/lib/whatsapp";
 
 export async function PATCH(
   request: Request,
@@ -133,6 +137,35 @@ export async function PATCH(
       }).catch((e) => console.warn("WhatsApp background dispatch failed:", e));
     } catch (e) {
       console.warn("WhatsApp trigger error:", e);
+    }
+  }
+
+  // Automated WhatsApp trigger when revision changes are requested (Internal or Client)
+  if (
+    body.stage === "editing" &&
+    typeof body.notes === "string" &&
+    (body.notes.includes("[Internal Revision") || body.notes.includes("[Client Revision")) &&
+    updatedRow?.editor_phone
+  ) {
+    try {
+      const feedbackLine =
+        body.notes
+          .split("\n")
+          .find((l: string) => l.includes("[Internal Revision") || l.includes("[Client Revision")) ||
+        body.notes;
+      const msg = createClientRevisionAlertMessage({
+        clientName: String(updatedRow.client_name || "Client"),
+        videoTitle: String(updatedRow.title || "Video"),
+        editorName: String(updatedRow.editor_name || "Rahul"),
+        teamName: String(updatedRow.team || "BSchool"),
+        revisionFeedback: feedbackLine,
+      });
+      sendWhatsAppApi({
+        phone: String(updatedRow.editor_phone),
+        message: msg,
+      }).catch((e) => console.warn("WhatsApp background revision dispatch failed:", e));
+    } catch (e) {
+      console.warn("WhatsApp revision trigger error:", e);
     }
   }
 
