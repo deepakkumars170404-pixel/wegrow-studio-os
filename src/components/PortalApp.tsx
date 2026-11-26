@@ -505,6 +505,7 @@ export default function PortalApp() {
         canDelete={canManageOps}
         onClose={() => setDrawerOpen(false)}
         onSaved={fetchAllData}
+        onRefreshClients={fetchAllData}
       />
 
       {/* Profile & Password Change Modal */}

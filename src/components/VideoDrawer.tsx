@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { X, Trash2, ExternalLink, Save, Plus, Building2, Check } from "lucide-react";
 import { CONTENT_TYPES, VIDEO_STAGES, WEGROW_TEAMS, TEAM_META, type WegrowTeam } from "@/lib/constants";
 import type { ClientItem, StaffMember, VideoItem } from "@/types/portal";
@@ -16,6 +16,7 @@ interface VideoDrawerProps {
   canDelete: boolean;
   onClose: () => void;
   onSaved: () => void;
+  onRefreshClients?: () => void;
 }
 
 export default function VideoDrawer({
@@ -28,6 +29,7 @@ export default function VideoDrawer({
   canDelete,
   onClose,
   onSaved,
+  onRefreshClients,
 }: VideoDrawerProps) {
   const isManagerOrAbove =
     userRole === "owner" || userRole === "admin" || userRole === "manager";
@@ -55,6 +57,10 @@ export default function VideoDrawer({
   const [newClientName, setNewClientName] = useState("");
   const [creatingClient, setCreatingClient] = useState(false);
 
+  // Guard against wiping user's typed contents when background data refreshes
+  const isInitializedRef = useRef(false);
+  const currentVideoIdRef = useRef<number | null | undefined>(undefined);
+
   function handleSelectTeam(newTeam: WegrowTeam) {
     setTeam(newTeam);
     // Auto-assign Pandeeswaran as cameraman for all 3 teams!
@@ -79,59 +85,75 @@ export default function VideoDrawer({
   }
 
   useEffect(() => {
-    if (!open) return;
-    setError("");
-    if (video) {
-      setTeam((video.team as WegrowTeam) || "BSchool");
-      setTitle(video.title);
-      setClientId(video.client_id);
-      setIsAddingNewClient(false);
-      setNewClientName("");
-      setContentType(video.content_type);
-      setStage(video.stage);
-      setPriority(video.priority);
-      setEditorId(video.assigned_editor_id ? String(video.assigned_editor_id) : "");
-      setWriterId(video.assigned_writer_id ? String(video.assigned_writer_id) : "");
-      setCameramanId(video.assigned_cameraman_id ? String(video.assigned_cameraman_id) : "");
-      const normalizedDeadline = video.edit_deadline
-        ? video.edit_deadline.includes("T")
-          ? video.edit_deadline.slice(0, 16)
-          : `${video.edit_deadline}T18:00`
-        : "";
-      setEditDeadline(normalizedDeadline);
-      setPostingDate(video.posting_date || "");
-      setRawLink(video.raw_link || "");
-      setFinalLink(video.final_link || "");
-      setLiveUrl(video.live_url || "");
-      setNotes(video.notes || "");
-    } else {
-      const today = new Date().toISOString().slice(0, 10);
-      setTitle("");
-      setClientId(clients[0]?.id || 0);
-      setIsAddingNewClient(clients.length === 0);
-      setNewClientName("");
-      setContentType("Reel");
-      setStage("script");
-      setPriority("normal");
-      setEditDeadline(`${today}T18:00`);
-      setPostingDate("");
-      setRawLink("");
-      setFinalLink("");
-      setLiveUrl("");
-      setNotes("");
-
-      // Apply initial smart default team assignment
-      let defaultTeam: WegrowTeam = "BSchool";
-      if (currentUser?.email?.toLowerCase().includes("rajkumar")) {
-        defaultTeam = "SkillCampus";
-      } else if (currentUser?.email?.toLowerCase().includes("gopinath")) {
-        defaultTeam = "Jobz";
-      }
-      handleSelectTeam(defaultTeam);
+    if (!open) {
+      isInitializedRef.current = false;
+      return;
     }
-  }, [open, video, clients, currentUser]);
 
-  async function handleQuickCreateClient() {
+    // Only populate/reset fields if drawer just opened or switching between videos
+    const videoChanged = video ? video.id !== currentVideoIdRef.current : currentVideoIdRef.current !== null;
+
+    if (!isInitializedRef.current || videoChanged) {
+      isInitializedRef.current = true;
+      currentVideoIdRef.current = video ? video.id : null;
+      setError("");
+
+      if (video) {
+        setTeam((video.team as WegrowTeam) || "BSchool");
+        setTitle(video.title);
+        setClientId(video.client_id);
+        setIsAddingNewClient(false);
+        setNewClientName("");
+        setContentType(video.content_type);
+        setStage(video.stage);
+        setPriority(video.priority);
+        setEditorId(video.assigned_editor_id ? String(video.assigned_editor_id) : "");
+        setWriterId(video.assigned_writer_id ? String(video.assigned_writer_id) : "");
+        setCameramanId(video.assigned_cameraman_id ? String(video.assigned_cameraman_id) : "");
+        const normalizedDeadline = video.edit_deadline
+          ? video.edit_deadline.includes("T")
+            ? video.edit_deadline.slice(0, 16)
+            : `${video.edit_deadline}T18:00`
+          : "";
+        setEditDeadline(normalizedDeadline);
+        setPostingDate(video.posting_date || "");
+        setRawLink(video.raw_link || "");
+        setFinalLink(video.final_link || "");
+        setLiveUrl(video.live_url || "");
+        setNotes(video.notes || "");
+      } else {
+        const today = new Date().toISOString().slice(0, 10);
+        setTitle("");
+        setClientId(clients[0]?.id || 0);
+        setIsAddingNewClient(clients.length === 0);
+        setNewClientName("");
+        setContentType("Reel");
+        setStage("script");
+        setPriority("normal");
+        setEditDeadline(`${today}T18:00`);
+        setPostingDate("");
+        setRawLink("");
+        setFinalLink("");
+        setLiveUrl("");
+        setNotes("");
+
+        // Apply initial smart default team assignment
+        let defaultTeam: WegrowTeam = "BSchool";
+        if (currentUser?.email?.toLowerCase().includes("rajkumar")) {
+          defaultTeam = "SkillCampus";
+        } else if (currentUser?.email?.toLowerCase().includes("gopinath")) {
+          defaultTeam = "Jobz";
+        }
+        handleSelectTeam(defaultTeam);
+      }
+    }
+  }, [open, video]);
+
+  async function handleQuickCreateClient(e?: React.MouseEvent | React.KeyboardEvent) {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     const cleanName = newClientName.trim();
     if (!cleanName) {
       setError("Please enter a client name.");
@@ -150,10 +172,17 @@ export default function VideoDrawer({
         setError(data.error || "Failed to create client.");
         return;
       }
-      setClientId(Number(data.client.id));
+      const newId = Number(data.client.id);
+      setClientId(newId);
       setIsAddingNewClient(false);
       setNewClientName("");
-      onSaved();
+
+      // Refresh clients list in parent without resetting drawer form!
+      if (onRefreshClients) {
+        onRefreshClients();
+      } else {
+        onSaved();
+      }
     } catch {
       setError("Network error while creating client.");
     } finally {
@@ -365,9 +394,15 @@ export default function VideoDrawer({
                       <Building2 className="w-4 h-4 text-indigo-500 absolute left-3 top-2.5 pointer-events-none" />
                       <input
                         type="text"
-                        required
                         value={newClientName}
                         onChange={(e) => setNewClientName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleQuickCreateClient(e);
+                          }
+                        }}
                         placeholder="Enter Client Name (e.g. Aura Aesthetics, Apple Dental)..."
                         className="w-full pl-9 pr-3 py-2 text-xs border-2 border-indigo-500/60 rounded-xl bg-indigo-50/20 text-slate-900 focus:outline-none focus:border-indigo-600 focus:ring-2 focus:ring-indigo-500/20 placeholder-slate-400 font-medium"
                         autoFocus={clients.length === 0}
@@ -377,7 +412,11 @@ export default function VideoDrawer({
                       <button
                         type="button"
                         disabled={creatingClient}
-                        onClick={handleQuickCreateClient}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleQuickCreateClient(e);
+                        }}
                         className="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shrink-0 transition cursor-pointer flex items-center gap-1 disabled:opacity-50"
                         title="Save Client"
                       >
