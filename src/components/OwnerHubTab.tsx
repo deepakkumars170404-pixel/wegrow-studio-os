@@ -648,8 +648,14 @@ export default function OwnerHubTab({
 
                 {filteredVideos.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="py-12 text-center text-slate-400 text-xs">
-                      No videos match the selected filters.
+                    <td colSpan={7} className="py-16 text-center text-slate-400 text-xs">
+                      <div className="flex flex-col items-center justify-center gap-2">
+                        <Film className="w-8 h-8 text-slate-300" />
+                        <p className="font-bold text-slate-700 text-sm">No videos found</p>
+                        <p className="text-[11px] text-slate-400">
+                          Click &quot;+ Add New Video&quot; above to create your first video task.
+                        </p>
+                      </div>
                     </td>
                   </tr>
                 )}
