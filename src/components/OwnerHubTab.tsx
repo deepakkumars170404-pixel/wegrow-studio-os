@@ -463,10 +463,20 @@ export default function OwnerHubTab({
                         <p className="font-bold text-slate-900 leading-snug">
                           {video.title}
                         </p>
-                        <div className="flex items-center gap-1.5 mt-1">
+                        <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                           <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 font-medium">
                             {video.content_type}
                           </span>
+                          {video.notes && video.notes.includes("[Client Approved") && (
+                            <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 border border-emerald-300 px-2 py-0.2 rounded-full flex items-center gap-1">
+                              🎉 Client Approved
+                            </span>
+                          )}
+                          {video.notes && video.notes.includes("[Client Revision Request") && video.stage === "editing" && (
+                            <span className="text-[10px] font-bold text-rose-800 bg-rose-100 border border-rose-300 px-2 py-0.2 rounded-full flex items-center gap-1">
+                              ⚠️ Client Revision
+                            </span>
+                          )}
                           {video.priority === "urgent" && (
                             <span className="text-[10px] font-bold text-rose-700 bg-rose-50 border border-rose-200 px-1.5 py-0.2 rounded-full">
                               Urgent

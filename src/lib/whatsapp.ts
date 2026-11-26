@@ -101,3 +101,41 @@ export function createDeadlineAlertMessage({
 }): string {
   return `⚠️ *WEGROW DEADLINE REMINDER*\n\nHi ${editorName}!\nFriendly reminder that edit deadline is approaching:\n📌 *Client:* ${clientName}\n🎥 *Video:* ${videoTitle}\n⏰ *Deadline:* ${editDeadline}\n\nPlease submit your final cut link soon!`;
 }
+
+export function createClientApprovedAlertMessage({
+  clientName,
+  videoTitle,
+  staffName,
+  teamName,
+  clientComment,
+  finalLink,
+}: {
+  clientName: string;
+  videoTitle: string;
+  staffName: string;
+  teamName: string;
+  clientComment?: string;
+  finalLink?: string;
+}): string {
+  return `🎉 *CLIENT APPROVAL ALERT - WEGROW OS*\n\nHi ${staffName}!\nClient *${clientName}* has officially APPROVED the video!\n\n📌 *Team / Brand:* ${teamName}\n🎥 *Video:* ${videoTitle}\n${
+    clientComment ? `💬 *Client Feedback:* "${clientComment}"\n` : ""
+  }${
+    finalLink ? `🔗 *Final Cut:* ${finalLink}\n` : ""
+  }\n🚀 *Next Action:* Scheduled for live posting on Instagram / YouTube by Mareeswaran & Millar!`;
+}
+
+export function createClientRevisionAlertMessage({
+  clientName,
+  videoTitle,
+  editorName,
+  teamName,
+  revisionFeedback,
+}: {
+  clientName: string;
+  videoTitle: string;
+  editorName: string;
+  teamName: string;
+  revisionFeedback: string;
+}): string {
+  return `⚠️ *CLIENT REVISION REQUEST - WEGROW OS*\n\nHi ${editorName}!\nClient *${clientName}* has requested revision changes for:\n\n📌 *Team / Brand:* ${teamName}\n🎥 *Video:* ${videoTitle}\n💬 *Changes Required:*\n${revisionFeedback}\n\nPlease update the edit and submit the revised cut!`;
+}

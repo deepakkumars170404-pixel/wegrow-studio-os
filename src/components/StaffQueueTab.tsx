@@ -106,6 +106,9 @@ export default function StaffQueueTab({
 
   const activeTasks = teamFilteredVideos.filter((v) => v.stage !== "posted");
   const completedTasks = teamFilteredVideos.filter((v) => v.stage === "posted");
+  const clientApprovedVideos = teamFilteredVideos.filter(
+    (v) => v.stage === "scheduled" && v.notes && v.notes.includes("[Client Approved")
+  );
 
   const displayedVideos = teamFilteredVideos.filter((v) => {
     if (filter === "active") return v.stage !== "posted";
@@ -293,6 +296,29 @@ export default function StaffQueueTab({
         })}
       </div>
 
+      {/* Client Approval Live Notification Banner */}
+      {clientApprovedVideos.length > 0 && (
+        <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 text-white rounded-2xl p-4 shadow-sm flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">🔔</span>
+            <div>
+              <h4 className="text-sm font-bold flex items-center gap-2">
+                <span>{clientApprovedVideos.length} Video{clientApprovedVideos.length > 1 ? "s" : ""} Approved by Client!</span>
+                <span className="text-[10px] uppercase tracking-wider bg-white/20 px-2 py-0.5 rounded-full font-semibold">
+                  Ready to Post Live
+                </span>
+              </h4>
+              <p className="text-xs text-emerald-100 mt-0.5">
+                Client approved the final cut! Scheduled for Mareeswaran & Millar to publish on Instagram / YouTube.
+              </p>
+            </div>
+          </div>
+          <span className="text-xs font-bold bg-white text-emerald-900 px-3 py-1 rounded-xl shadow-2xs">
+            {clientApprovedVideos.map((v) => v.client_name).slice(0, 3).join(", ")}
+          </span>
+        </div>
+      )}
+
       {/* Task Cards List */}
       <div className="space-y-3">
         {displayedVideos.map((video) => {
@@ -391,11 +417,48 @@ export default function StaffQueueTab({
                 </div>
               </div>
 
-              {/* Notes if available */}
-              {video.notes && (
+              {/* Prominent Client Approval Message Box */}
+              {video.notes && video.notes.includes("[Client Approved") && (
+                <div className="bg-emerald-50 border border-emerald-300 rounded-xl p-3 flex items-start gap-2.5 shadow-2xs">
+                  <span className="text-base shrink-0">🎉</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <span className="text-xs font-bold text-emerald-900 uppercase tracking-wide">
+                        Client Approved!
+                      </span>
+                      <span className="text-[10px] font-bold bg-emerald-200/80 text-emerald-800 px-2 py-0.5 rounded-md">
+                        {video.team} • Ready for Mareeswaran / Millar to Post
+                      </span>
+                    </div>
+                    <p className="text-xs text-emerald-800 mt-1 font-medium leading-relaxed">
+                      {video.notes.split("\n").find((line) => line.includes("[Client Approved"))}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Prominent Client Revision Request Box */}
+              {video.notes && video.notes.includes("[Client Revision Request") && video.stage === "editing" && (
+                <div className="bg-rose-50 border border-rose-300 rounded-xl p-3 flex items-start gap-2.5 shadow-2xs">
+                  <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                  <div className="flex-1 min-w-0">
+                    <span className="text-xs font-bold text-rose-900 uppercase tracking-wide block">
+                      Client Requested Revision Changes:
+                    </span>
+                    <p className="text-xs text-rose-800 mt-1 font-medium leading-relaxed">
+                      {video.notes.split("\n").find((line) => line.includes("[Client Revision Request"))}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* General Notes */}
+              {video.notes &&
+                !video.notes.includes("[Client Approved") &&
+                !video.notes.includes("[Client Revision Request") && (
                 <p className="text-xs text-slate-600 italic bg-amber-50/50 p-2.5 rounded-lg border border-amber-100">
                   <strong className="not-italic text-amber-900 font-semibold mr-1">
-                    Notes / Revisions:
+                    Notes / Hook:
                   </strong>
                   {video.notes}
                 </p>
