@@ -44,6 +44,7 @@ interface OwnerHubTabProps {
   onStageChange: (videoId: number, newStage: VideoStage) => void;
   onNewVideo: () => void;
   onSelectClient: (clientId: number) => void;
+  onNavigateReviews?: () => void;
 }
 
 type QuickFilter = "all" | "shoot" | "editing" | "approval" | "overdue";
@@ -55,6 +56,7 @@ export default function OwnerHubTab({
   onOpenVideo,
   onStageChange,
   onNewVideo,
+  onNavigateReviews,
 }: OwnerHubTabProps) {
   const [selectedTeam, setSelectedTeam] = useState<"all" | WegrowTeam>("all");
   const [quickFilter, setQuickFilter] = useState<QuickFilter>("all");
@@ -249,7 +251,13 @@ export default function OwnerHubTab({
 
         {/* In Review & Approval */}
         <div
-          onClick={() => setQuickFilter((prev) => (prev === "approval" ? "all" : "approval"))}
+          onClick={() => {
+            if (onNavigateReviews) {
+              onNavigateReviews();
+            } else {
+              setQuickFilter((prev) => (prev === "approval" ? "all" : "approval"));
+            }
+          }}
           className={`p-5 rounded-2xl border transition cursor-pointer select-none ${
             quickFilter === "approval"
               ? "bg-indigo-600 text-white border-indigo-600 shadow-md"
@@ -271,13 +279,20 @@ export default function OwnerHubTab({
             />
           </div>
           <p className="text-3xl font-extrabold mt-2">{inApproval.length}</p>
-          <p
-            className={`text-xs mt-1 font-medium ${
-              quickFilter === "approval" ? "text-indigo-100" : "text-slate-500"
-            }`}
-          >
-            Internal review & client approval
-          </p>
+          <div className="flex items-center justify-between mt-1">
+            <p
+              className={`text-xs font-medium ${
+                quickFilter === "approval" ? "text-indigo-100" : "text-slate-500"
+              }`}
+            >
+              Internal review & client approval
+            </p>
+            {onNavigateReviews && inApproval.length > 0 && (
+              <span className="text-[10px] font-extrabold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-lg border border-indigo-200 hover:bg-indigo-100">
+                Open Review Tab ➔
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Overdue / Urgent */}

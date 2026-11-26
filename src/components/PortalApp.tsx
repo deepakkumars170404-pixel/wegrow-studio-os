@@ -16,6 +16,7 @@ import {
   ShieldCheck,
   Menu,
   X,
+  CheckCircle2,
 } from "lucide-react";
 import { ROLE_META } from "@/lib/constants";
 import type { VideoStage } from "@/lib/db";
@@ -23,6 +24,7 @@ import type { ClientItem, StaffMember, VideoItem } from "@/types/portal";
 import LoginView from "./LoginView";
 import OwnerHubTab from "./OwnerHubTab";
 import StaffQueueTab from "./StaffQueueTab";
+import ReviewsTab from "./ReviewsTab";
 import ClientsTab from "./ClientsTab";
 import CalendarTab from "./CalendarTab";
 import StaffTab from "./StaffTab";
@@ -33,6 +35,7 @@ import VideoDrawer from "./VideoDrawer";
 
 type TabKey =
   | "videos"
+  | "reviews"
   | "my_queue"
   | "analytics"
   | "clients"
@@ -162,14 +165,30 @@ export default function PortalApp() {
     return true;
   });
 
+  // Count videos needing review
+  const pendingReviewsCount = videos.filter((v) =>
+    ["internal_review", "client_approval"].includes(v.stage)
+  ).length;
+
   // Navigation Items per Role
-  const navItems: { key: TabKey; label: string; icon: React.ReactNode }[] = [
+  const navItems: {
+    key: TabKey;
+    label: string;
+    icon: React.ReactNode;
+    badge?: number;
+  }[] = [
     ...(canManageOps
       ? [
           {
             key: "videos" as const,
             label: "All Videos & Tasks",
             icon: <Film className="w-4 h-4" />,
+          },
+          {
+            key: "reviews" as const,
+            label: "Review & Approvals",
+            icon: <CheckCircle2 className="w-4 h-4" />,
+            badge: pendingReviewsCount > 0 ? pendingReviewsCount : undefined,
           },
           {
             key: "analytics" as const,
@@ -197,6 +216,19 @@ export default function PortalApp() {
                 : "My Scripts & Content",
             icon: <ListTodo className="w-4 h-4" />,
           },
+          ...(user.role === "content_writer" ||
+          user.role === "ai_content_creator" ||
+          user.email.toLowerCase().includes("rajkumar") ||
+          user.email.toLowerCase().includes("gopinath")
+            ? [
+                {
+                  key: "reviews" as const,
+                  label: "Review & Approvals",
+                  icon: <CheckCircle2 className="w-4 h-4" />,
+                  badge: pendingReviewsCount > 0 ? pendingReviewsCount : undefined,
+                },
+              ]
+            : []),
         ]),
     {
       key: "clients",
@@ -295,14 +327,27 @@ export default function PortalApp() {
                     setActiveTab(item.key);
                     setMobileMenuOpen(false);
                   }}
-                  className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition cursor-pointer ${
+                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition cursor-pointer ${
                     active
                       ? "bg-indigo-600 text-white shadow-sm"
                       : "text-slate-400 hover:bg-slate-900 hover:text-slate-100"
                   }`}
                 >
-                  {item.icon}
-                  {item.label}
+                  <div className="flex items-center gap-3">
+                    {item.icon}
+                    {item.label}
+                  </div>
+                  {item.badge !== undefined && (
+                    <span
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                        active
+                          ? "bg-white text-indigo-700"
+                          : "bg-amber-500 text-white animate-pulse"
+                      }`}
+                    >
+                      {item.badge}
+                    </span>
+                  )}
                 </button>
               );
             })}
@@ -428,6 +473,25 @@ export default function PortalApp() {
               onSelectClient={() => {
                 setActiveTab("clients");
               }}
+              onNavigateReviews={() => {
+                setActiveTab("reviews");
+              }}
+            />
+          )}
+
+          {/* DEDICATED REVIEW & APPROVALS TAB */}
+          {activeTab === "reviews" && (
+            <ReviewsTab
+              videos={visibleVideos}
+              clients={clients}
+              staff={staff}
+              currentUser={user}
+              onStageChange={handleStageChange}
+              onOpenVideo={(v) => {
+                setEditingVideo(v);
+                setDrawerOpen(true);
+              }}
+              onRefresh={fetchAllData}
             />
           )}
 
