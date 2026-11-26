@@ -17,6 +17,9 @@ import {
   Send,
   RefreshCw,
   Globe,
+  Share2,
+  Copy,
+  MessageSquare,
 } from "lucide-react";
 import {
   formatDeadline,
@@ -426,6 +429,45 @@ export default function StaffQueueTab({
                       <ExternalLink className="w-3.5 h-3.5" />
                       View Final Cut
                     </a>
+                  )}
+
+                  {video.review_token && (
+                    <div className="flex items-center gap-1 bg-indigo-50/70 border border-indigo-200/80 rounded-lg p-0.5">
+                      <a
+                        href={`/review/${video.review_token}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        title="Open Client Approval Portal"
+                        className="px-2 py-0.5 text-indigo-700 hover:text-indigo-900 font-bold flex items-center gap-1 text-[11px] hover:underline"
+                      >
+                        <Share2 className="w-3 h-3" />
+                        Client Portal
+                      </a>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const url = `${window.location.origin}/review/${video.review_token}`;
+                          navigator.clipboard.writeText(url);
+                          alert(`Client Review Link Copied!\n\n${url}`);
+                        }}
+                        title="Copy Client Review Link"
+                        className="p-1 hover:bg-white text-slate-600 hover:text-slate-900 rounded cursor-pointer"
+                      >
+                        <Copy className="w-3 h-3" />
+                      </button>
+                      <a
+                        href={`https://wa.me/?text=${encodeURIComponent(
+                          `🎬 *Video Ready for Review - WEGROW Studio*\n\nHi *${video.client_name}* Team!\nYour new *${video.content_type}* video cut: *"${video.title}"* is ready for your review.\n\n👉 Please click here to watch and approve in 1-click:\n${window.location.origin}/review/${video.review_token}\n\nThank you!\n- WEGROW Digital Team`
+                        )}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        title="Share on WhatsApp to Client"
+                        className="p-1 hover:bg-emerald-100 text-emerald-700 rounded cursor-pointer"
+                      >
+                        <MessageSquare className="w-3 h-3" />
+                      </a>
+                    </div>
                   )}
 
                   {video.live_url && (

@@ -26,6 +26,25 @@ interface VideoData {
   clientIndustry: string;
 }
 
+function getEmbedUrl(url: string): string | null {
+  if (!url) return null;
+  const driveMatch = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+  if (driveMatch) {
+    return `https://drive.google.com/file/d/${driveMatch[1]}/preview`;
+  }
+  const driveIdMatch = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+  if (driveIdMatch && url.includes("drive.google.com")) {
+    return `https://drive.google.com/file/d/${driveIdMatch[1]}/preview`;
+  }
+  const ytMatch = url.match(
+    /(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([a-zA-Z0-9_-]+)/
+  );
+  if (ytMatch) {
+    return `https://www.youtube.com/embed/${ytMatch[1]}`;
+  }
+  return null;
+}
+
 export default function ClientReviewPage({
   params,
 }: {
@@ -205,20 +224,40 @@ export default function ClientReviewPage({
             )}
           </div>
 
-          {/* Video Preview Action */}
-          <div className="p-4 bg-slate-950/60 rounded-xl border border-slate-800">
-            <p className="text-xs text-slate-400 mb-2 font-medium">Final Video Cut:</p>
+          {/* Video Preview & Player */}
+          <div className="p-4 bg-slate-950/60 rounded-xl border border-slate-800 space-y-3">
+            <p className="text-xs text-slate-400 font-medium">Final Video Cut Preview:</p>
             {video.finalLink ? (
-              <a
-                href={video.finalLink}
-                target="_blank"
-                rel="noreferrer"
-                className="w-full py-3.5 px-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/20 transition"
-              >
-                <Film className="w-4 h-4" />
-                Watch Video Cut in Full Quality
-                <ExternalLink className="w-4 h-4" />
-              </a>
+              <>
+                {(() => {
+                  const embedUrl = getEmbedUrl(video.finalLink);
+                  if (embedUrl) {
+                    return (
+                      <div className="relative w-full aspect-video rounded-xl overflow-hidden border border-slate-800 bg-black shadow-inner">
+                        <iframe
+                          src={embedUrl}
+                          className="w-full h-full border-0"
+                          allow="autoplay; encrypted-media; fullscreen"
+                          allowFullScreen
+                          title={video.title}
+                        />
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
+
+                <a
+                  href={video.finalLink}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="w-full py-3.5 px-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/20 transition cursor-pointer"
+                >
+                  <Film className="w-4 h-4" />
+                  Watch Video Cut in Full Quality (Google Drive)
+                  <ExternalLink className="w-4 h-4" />
+                </a>
+              </>
             ) : (
               <div className="text-center py-4 text-xs text-slate-500">
                 Video file is being rendered. Check back shortly.
