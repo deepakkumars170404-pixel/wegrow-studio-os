@@ -3,47 +3,15 @@
 import React, { useEffect, useState } from "react";
 import {
   Share2,
-  MessageSquare,
   Building,
   CheckCircle2,
-  Send,
-  Loader2,
   ToggleLeft,
   ToggleRight,
-  Clock,
+  Zap,
 } from "lucide-react";
 
 export default function SettingsTab() {
   const [socialAutoPosting, setSocialAutoPosting] = useState(false);
-  const [whatsappEnabled, setWhatsappEnabled] = useState(true);
-  const [testPhone, setTestPhone] = useState("");
-  const [testSending, setTestSending] = useState(false);
-  const [testResult, setTestResult] = useState<{ success: boolean; msg: string } | null>(null);
-
-  // Automated Deadline Scan State
-  const [cronScanning, setCronScanning] = useState(false);
-  const [cronResult, setCronResult] = useState<{ success: boolean; msg: string } | null>(null);
-
-  async function handleRunDeadlineScan() {
-    setCronScanning(true);
-    setCronResult(null);
-    try {
-      const res = await fetch("/api/cron/deadline-alerts", { method: "POST" });
-      const data = await res.json();
-      if (res.ok) {
-        setCronResult({
-          success: true,
-          msg: `Scan complete: Checked ${data.totalScanned} in-progress videos. Sent ${data.alertedCount} automated WhatsApp alert(s).`,
-        });
-      } else {
-        setCronResult({ success: false, msg: data.error || "Deadline scan failed." });
-      }
-    } catch {
-      setCronResult({ success: false, msg: "Network error during scan." });
-    } finally {
-      setCronScanning(false);
-    }
-  }
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -52,8 +20,7 @@ export default function SettingsTab() {
         const res = await fetch("/api/settings");
         if (res.ok) {
           const json = await res.json();
-          setSocialAutoPosting(json.settings.social_auto_posting === "1");
-          setWhatsappEnabled(json.settings.whatsapp_enabled !== "0");
+          setSocialAutoPosting(json.settings?.social_auto_posting === "1");
         }
       } catch (e) {
         console.warn("Failed to load settings:", e);
@@ -75,42 +42,6 @@ export default function SettingsTab() {
     }
   }
 
-  async function handleSendTestWhatsApp(e: React.FormEvent) {
-    e.preventDefault();
-    if (!testPhone.trim()) return;
-    setTestSending(true);
-    setTestResult(null);
-
-    try {
-      const res = await fetch("/api/whatsapp/send", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          phone: testPhone,
-          message:
-            "🚀 *WEGROW Studio OS Test Alert*\n\nWhatsApp Gateway (mydreamstechnology) is successfully connected to your studio portal! Automated shoot & edit deadline notifications are active.",
-        }),
-      });
-
-      const data = await res.json();
-      if (res.ok) {
-        setTestResult({
-          success: true,
-          msg: "WhatsApp test alert dispatched successfully!",
-        });
-      } else {
-        setTestResult({
-          success: false,
-          msg: data.error || "Failed to dispatch test WhatsApp",
-        });
-      }
-    } catch {
-      setTestResult({ success: false, msg: "Network error" });
-    } finally {
-      setTestSending(false);
-    }
-  }
-
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
       <div>
@@ -118,7 +49,7 @@ export default function SettingsTab() {
           Organization & System Settings
         </h2>
         <p className="text-xs text-slate-500">
-          Configure social media auto-posting, WhatsApp gateway, and multi-tenant controls
+          Configure social media auto-posting, studio engine velocity, and multi-tenant controls
         </p>
       </div>
 
@@ -169,115 +100,39 @@ export default function SettingsTab() {
         </div>
       </div>
 
-      {/* Feature 2: WhatsApp Gateway Integration */}
+      {/* Feature 2: High-Speed Instant Engine */}
       <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex items-start gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-              <MessageSquare className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 className="text-sm font-bold text-slate-900">
-                WhatsApp Business Gateway Automation
-              </h3>
-              <p className="text-xs text-slate-500 mt-0.5 max-w-lg leading-relaxed">
-                Powered by <strong>mydreamstechnology</strong> WhatsApp API gateway. Automatically sends alerts when Pandeeswaran marks a shoot done, and alerts editors 2 hours before deadlines.
-              </p>
-            </div>
+        <div className="flex items-start gap-3.5">
+          <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+            <Zap className="w-5 h-5" />
           </div>
-
-          <button
-            onClick={() => {
-              const nextVal = !whatsappEnabled;
-              setWhatsappEnabled(nextVal);
-              updateSetting("whatsapp_enabled", nextVal ? "1" : "0");
-            }}
-            disabled={saving}
-            className="cursor-pointer transition shrink-0"
-          >
-            {whatsappEnabled ? (
-              <ToggleRight className="w-9 h-9 text-emerald-600" />
-            ) : (
-              <ToggleLeft className="w-9 h-9 text-slate-300 hover:text-slate-400" />
-            )}
-          </button>
+          <div>
+            <h3 className="text-sm font-bold text-slate-900">
+              High-Speed Instant Portal Engine
+            </h3>
+            <p className="text-xs text-slate-500 mt-0.5 max-w-lg leading-relaxed">
+              Equipped with <strong>0ms Optimistic UI updates</strong>. All button clicks (Shoot Done, Editor Approvals, Internal & Client Reviews, Scheduled Posting) update instantly on your screen without waiting for network latency.
+            </p>
+          </div>
         </div>
 
-        {/* Credentials overview */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 rounded-xl bg-slate-50 border border-slate-200/70 text-xs">
-          <div>
-            <span className="text-slate-500 block">Active License Number:</span>
-            <code className="font-bold text-slate-800">90093749600</code>
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span className="text-slate-700 font-medium">Optimistic 0ms Button Response</span>
           </div>
-          <div>
-            <span className="text-slate-500 block">Gateway Endpoint:</span>
-            <code className="text-slate-700">https://wa.mydreamstechnology.in/</code>
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span className="text-slate-700 font-medium">Background Database Sync</span>
           </div>
-        </div>
-
-        {/* Send Test WhatsApp Alert */}
-        <div className="pt-2">
-          <h4 className="text-xs font-bold text-slate-800 mb-2">Send Test WhatsApp Message</h4>
-          <form onSubmit={handleSendTestWhatsApp} className="flex gap-2">
-            <input
-              type="tel"
-              required
-              value={testPhone}
-              onChange={(e) => setTestPhone(e.target.value)}
-              placeholder="Enter 10-digit mobile number (e.g. 9876543210)"
-              className="flex-1 px-3.5 py-2 text-xs border border-slate-300 rounded-xl text-slate-900 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-            />
-            <button
-              type="submit"
-              disabled={testSending}
-              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white text-xs font-semibold rounded-xl flex items-center gap-1.5 shadow-2xs cursor-pointer"
-            >
-              {testSending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
-              Send Test Alert
-            </button>
-          </form>
-
-          {testResult && (
-            <p
-              className={`text-xs font-semibold mt-2 ${
-                testResult.success ? "text-emerald-700" : "text-rose-600"
-              }`}
-            >
-              {testResult.msg}
-            </p>
-          )}
-
-          {/* Automated 2-Hour Deadline Trigger */}
-          <div className="mt-4 pt-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h4 className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                <Clock className="w-3.5 h-3.5 text-indigo-600" />
-                Automated 2-Hour Approaching Deadline Scanner
-              </h4>
-              <p className="text-[11px] text-slate-500">
-                Runs on schedule via cron, or trigger manually to alert assigned editors of upcoming deadlines.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={handleRunDeadlineScan}
-              disabled={cronScanning}
-              className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-xs font-semibold rounded-xl flex items-center gap-1.5 shadow-2xs cursor-pointer"
-            >
-              {cronScanning ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Clock className="w-3.5 h-3.5" />}
-              Run Deadline Scan Now
-            </button>
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span className="text-slate-700 font-medium">External Blocking Gateways Disabled</span>
           </div>
-
-          {cronResult && (
-            <p
-              className={`text-xs font-semibold mt-2 ${
-                cronResult.success ? "text-indigo-700 bg-indigo-50 border border-indigo-200 p-2 rounded-lg" : "text-rose-600"
-              }`}
-            >
-              {cronResult.msg}
-            </p>
-          )}
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span className="text-slate-700 font-medium">In-Memory Local Query Caching</span>
+          </div>
         </div>
       </div>
 

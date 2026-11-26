@@ -1,10 +1,5 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
-import {
-  createClientApprovedAlertMessage,
-  createClientRevisionAlertMessage,
-  sendWhatsAppApi,
-} from "@/lib/whatsapp";
 
 export async function POST(
   request: Request,
@@ -51,54 +46,6 @@ export async function POST(
       args: [updatedNotes, Number(video.id)],
     });
 
-    // Automated WhatsApp alert dispatch to Team Lead and Publishers
-    try {
-      const clientName = String(video.client_name || "Client");
-      const videoTitle = String(video.title || "Video");
-      const teamName = String(video.team || "BSchool");
-      const finalLink = String(video.final_link || "");
-      const clientComment = body.comment ? String(body.comment).trim() : undefined;
-
-      // 1. Alert Team Lead (Rajavalli / Rajkumar / Gopinath)
-      if (video.writer_phone) {
-        const leadMsg = createClientApprovedAlertMessage({
-          clientName,
-          videoTitle,
-          staffName: String(video.writer_name || "Lead"),
-          teamName,
-          clientComment,
-          finalLink,
-        });
-        sendWhatsAppApi({
-          phone: String(video.writer_phone),
-          message: leadMsg,
-        }).catch((e) => console.warn("WhatsApp alert to lead failed:", e));
-      }
-
-      // 2. Alert Publishers (Mareeswaran / Millar) so they know to post live
-      const pubRes = await db.execute({
-        sql: "SELECT name, phone FROM users WHERE (lower(email) LIKE '%mareeswaran%' OR lower(email) LIKE '%millar%') AND phone != ''",
-      });
-      for (const pub of pubRes.rows) {
-        if (pub.phone) {
-          const pubMsg = createClientApprovedAlertMessage({
-            clientName,
-            videoTitle,
-            staffName: String(pub.name || "Publisher"),
-            teamName,
-            clientComment,
-            finalLink,
-          });
-          sendWhatsAppApi({
-            phone: String(pub.phone),
-            message: pubMsg,
-          }).catch((e) => console.warn("WhatsApp alert to publisher failed:", e));
-        }
-      }
-    } catch (e) {
-      console.warn("Client approval alert dispatch error:", e);
-    }
-
     return NextResponse.json({
       success: true,
       message: "Video approved successfully! Scheduled for publishing.",
@@ -124,32 +71,9 @@ export async function POST(
       args: [updatedNotes, Number(video.id)],
     });
 
-    // Alert Editor (Rahul) and Team Lead of changes needed
-    try {
-      const clientName = String(video.client_name || "Client");
-      const videoTitle = String(video.title || "Video");
-      const teamName = String(video.team || "BSchool");
-
-      if (video.editor_phone) {
-        const edMsg = createClientRevisionAlertMessage({
-          clientName,
-          videoTitle,
-          editorName: String(video.editor_name || "Editor"),
-          teamName,
-          revisionFeedback: feedback,
-        });
-        sendWhatsAppApi({
-          phone: String(video.editor_phone),
-          message: edMsg,
-        }).catch((e) => console.warn("WhatsApp alert to editor failed:", e));
-      }
-    } catch (e) {
-      console.warn("Client revision alert dispatch error:", e);
-    }
-
     return NextResponse.json({
       success: true,
-      message: "Feedback submitted! Our video editing team has been notified.",
+      message: "Feedback submitted! Our video editing team will make the revisions.",
       stage: "editing",
     });
   }

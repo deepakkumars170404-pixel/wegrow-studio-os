@@ -99,61 +99,55 @@ export default function ReviewsTab({
     setTimeout(() => setActionSuccess(""), 4000);
   }
 
-  async function handleApprove(video: VideoItem, targetStage: "client_approval" | "scheduled") {
-    try {
-      await fetch(`/api/videos/${video.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ stage: targetStage }),
-      });
-      onStageChange(video.id, targetStage);
-      showToast(
-        targetStage === "client_approval"
-          ? `✓ "${video.title}" approved internally! Moved to Client Approval.`
-          : `✓ "${video.title}" directly approved & marked ready to post!`
-      );
-    } catch {
-      alert("Failed to update status. Please try again.");
-    }
+  function handleApprove(video: VideoItem, targetStage: "client_approval" | "scheduled") {
+    // Instant 0ms optimistic transition
+    onStageChange(video.id, targetStage);
+    showToast(
+      targetStage === "client_approval"
+        ? `✓ "${video.title}" approved internally! Moved to Client Approval.`
+        : `✓ "${video.title}" directly approved & marked ready to post!`
+    );
+    // Non-blocking background persistence
+    fetch(`/api/videos/${video.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ stage: targetStage }),
+    }).catch((e) => console.error(e));
   }
 
-  async function handleSubmitRevision(e: React.FormEvent) {
+  function handleSubmitRevision(e: React.FormEvent) {
     e.preventDefault();
     if (!revisionModal || !revisionFeedback.trim()) return;
 
-    setSubmittingRevision(true);
-    const nowStr = new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" });
-    const tag = revisionModal.isClientRevision
-      ? `⚠️ [Client Revision Request on ${nowStr}]: ${revisionFeedback.trim()}`
-      : `⚠️ [Internal Revision by ${currentUser.name} on ${nowStr}]: ${revisionFeedback.trim()}`;
+    const modalVideo = revisionModal.video;
+    const feedbackText = revisionFeedback.trim();
+    const isClient = revisionModal.isClientRevision;
 
-    const existingNotes = revisionModal.video.notes || "";
+    // Instant optimistic state change & close modal
+    onStageChange(modalVideo.id, "editing");
+    setRevisionModal(null);
+    setRevisionFeedback("");
+    showToast(`⚠️ Revision request sent to Rahul for "${modalVideo.title}"!`);
+
+    const nowStr = new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" });
+    const tag = isClient
+      ? `⚠️ [Client Revision Request on ${nowStr}]: ${feedbackText}`
+      : `⚠️ [Internal Revision by ${currentUser.name} on ${nowStr}]: ${feedbackText}`;
+
+    const existingNotes = modalVideo.notes || "";
     const updatedNotes = `${tag}\n${existingNotes}`.trim();
 
-    try {
-      const res = await fetch(`/api/videos/${revisionModal.video.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          stage: "editing",
-          notes: updatedNotes,
-        }),
-      });
-
-      if (!res.ok) {
-        throw new Error("Failed to send revision.");
-      }
-
-      onStageChange(revisionModal.video.id, "editing");
-      setRevisionModal(null);
-      setRevisionFeedback("");
-      showToast(`⚠️ Revision request sent to Rahul for "${revisionModal.video.title}"!`);
-      onRefresh();
-    } catch {
-      alert("Network error sending revision.");
-    } finally {
-      setSubmittingRevision(false);
-    }
+    // Background persistence
+    fetch(`/api/videos/${modalVideo.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        stage: "editing",
+        notes: updatedNotes,
+      }),
+    }).catch((err) => {
+      console.error("Failed to submit revision:", err);
+    });
   }
 
   return (
@@ -574,7 +568,7 @@ export default function ReviewsTab({
                   autoFocus
                 />
                 <p className="text-[11px] text-slate-500 mt-1">
-                  💡 This feedback will trigger a popup alert and WhatsApp notification directly on Rahul&apos;s dashboard!
+                  💡 This feedback will trigger an instant revision alert directly on Rahul&apos;s dashboard!
                 </p>
               </div>
 

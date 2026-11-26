@@ -560,17 +560,6 @@ export default function StaffQueueTab({
                       >
                         <Copy className="w-3 h-3" />
                       </button>
-                      <a
-                        href={`https://wa.me/?text=${encodeURIComponent(
-                          `🎬 *Video Ready for Review - WEGROW Studio*\n\nHi *${video.client_name}* Team!\nYour new *${video.content_type}* video cut: *"${video.title}"* is ready for your review.\n\n👉 Please click here to watch and approve in 1-click:\n${window.location.origin}/review/${video.review_token}\n\nThank you!\n- WEGROW Digital Team`
-                        )}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        title="Share on WhatsApp to Client"
-                        className="p-1 hover:bg-emerald-100 text-emerald-700 rounded cursor-pointer"
-                      >
-                        <MessageSquare className="w-3 h-3" />
-                      </a>
                     </div>
                   )}
 

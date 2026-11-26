@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { getSessionUser } from "@/lib/auth";
-import { formatDeadline } from "@/lib/constants";
-import { createDeadlineAlertMessage, sendWhatsAppApi } from "@/lib/whatsapp";
 
 export async function GET(request: Request) {
   return handleDeadlineAlerts(request);
@@ -59,22 +57,7 @@ async function handleDeadlineAlerts(request: Request) {
       const clientName = String(row.client_name || "Client");
       const videoTitle = String(row.title || "Video");
 
-      if (editorPhone) {
-        const msg = createDeadlineAlertMessage({
-          clientName,
-          videoTitle,
-          editorName,
-          editDeadline: formatDeadline(rawDeadline),
-        });
-
-        try {
-          await sendWhatsAppApi({ phone: editorPhone, message: msg });
-        } catch (err) {
-          console.warn("Failed sending deadline alert via WhatsApp:", err);
-        }
-      }
-
-      // Mark alert sent in DB so duplicate alerts aren't sent
+      // Mark alert sent in DB so duplicate alerts aren't scanned
       await db.execute({
         sql: "UPDATE videos SET deadline_alert_sent = 1, updated_at = datetime('now') WHERE id = ?",
         args: [Number(row.id)],

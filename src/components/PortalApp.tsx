@@ -76,8 +76,6 @@ export default function PortalApp() {
       const sData = await sRes.json();
       setStaff(sData.staff || []);
     }
-    // Background check for approaching deadlines (Zero-cost cron)
-    fetch("/api/cron/deadline-alerts").catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -123,16 +121,19 @@ export default function PortalApp() {
     setStaff([]);
   }
 
-  async function handleStageChange(videoId: number, newStage: VideoStage) {
+  function handleStageChange(videoId: number, newStage: VideoStage) {
+    // 0ms instant optimistic update
     setVideos((prev) =>
       prev.map((v) => (v.id === videoId ? { ...v, stage: newStage } : v))
     );
-    await fetch(`/api/videos/${videoId}`, {
+    // Non-blocking background persistence
+    fetch(`/api/videos/${videoId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ stage: newStage }),
+    }).catch((err) => {
+      console.error("Failed to persist stage change:", err);
     });
-    fetchAllData();
   }
 
   if (!authChecked) {

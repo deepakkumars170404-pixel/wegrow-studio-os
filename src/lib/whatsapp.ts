@@ -20,54 +20,9 @@ export function getDirectWhatsAppUrl(phone: string, message: string): string {
 export async function sendWhatsAppApi({
   phone,
   message,
-  templateName,
-  templateParams,
 }: WhatsAppSendParams): Promise<{ success: boolean; data?: unknown; error?: string }> {
-  const cleanPhone = formatIndianPhone(phone);
-  if (!cleanPhone) {
-    return { success: false, error: "Invalid phone number" };
-  }
-
-  const license = process.env.WHATSAPP_LICENSE || "90093749600";
-  const apiKey = process.env.WHATSAPP_API_KEY || "kPHm6t2y5cW78qhKGvZYefQ3E";
-  const baseUrl = "https://wa.mydreamstechnology.in";
-
-  try {
-    let url: string;
-
-    if (templateName && templateParams && templateParams.length > 0) {
-      const paramsJoined = templateParams.join(",");
-      url = `${baseUrl}/api/sendtemplate.php?LicenseNumber=${encodeURIComponent(
-        license
-      )}&APIKey=${encodeURIComponent(apiKey)}&Contact=${encodeURIComponent(
-        cleanPhone
-      )}&Template=${encodeURIComponent(templateName)}&Param=${encodeURIComponent(
-        paramsJoined
-      )}`;
-    } else {
-      // Direct message fallback endpoint for gateway
-      url = `${baseUrl}/api/sendmsg.php?LicenseNumber=${encodeURIComponent(
-        license
-      )}&APIKey=${encodeURIComponent(apiKey)}&Contact=${encodeURIComponent(
-        cleanPhone
-      )}&Message=${encodeURIComponent(message)}`;
-    }
-
-    const res = await fetch(url, {
-      method: "GET",
-      headers: { Accept: "application/json, text/plain, */*" },
-      signal: AbortSignal.timeout(6000),
-    });
-
-    const text = await res.text();
-    return { success: res.ok, data: text };
-  } catch (err) {
-    console.warn("WhatsApp API warning:", err);
-    return {
-      success: false,
-      error: err instanceof Error ? err.message : "WhatsApp Gateway Error",
-    };
-  }
+  // WhatsApp external dispatch disabled per user request for maximum speed & responsiveness
+  return { success: true };
 }
 
 export function createShootDoneAlertMessage({

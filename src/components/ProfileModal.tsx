@@ -123,7 +123,7 @@ export default function ProfileModal({
 
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">
-              WhatsApp Phone Number (For Task Alerts)
+              Phone Number (Optional)
             </label>
             <div className="relative">
               <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
@@ -136,7 +136,7 @@ export default function ProfileModal({
               />
             </div>
             <p className="text-[11px] text-slate-500 mt-1">
-              Automated shoot & deadline alerts will be sent to this WhatsApp number.
+              Team contact phone number.
             </p>
           </div>
 

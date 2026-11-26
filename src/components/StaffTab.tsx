@@ -260,7 +260,7 @@ export default function StaffTab({
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  WhatsApp Phone Number (For Task Alerts)
+                  Phone Number (Optional)
                 </label>
                 <input
                   type="tel"

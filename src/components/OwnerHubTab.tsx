@@ -15,13 +15,8 @@ import {
   X,
   Building2,
   Users,
-  MessageSquare,
   Share2,
 } from "lucide-react";
-import {
-  createDeadlineAlertMessage,
-  getDirectWhatsAppUrl,
-} from "@/lib/whatsapp";
 import {
   formatDeadline,
   isDeadlineDueTodayOrOverdue,
@@ -612,36 +607,9 @@ export default function OwnerHubTab({
                         </div>
                       </td>
 
-                      {/* Edit & WhatsApp Actions */}
+                      {/* Actions */}
                       <td className="py-3.5 px-4 text-right" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-1.5">
-                          {(() => {
-                            const editor = staff.find((s) => s.id === video.assigned_editor_id);
-                            if (editor?.phone) {
-                              const waUrl = getDirectWhatsAppUrl(
-                                editor.phone,
-                                createDeadlineAlertMessage({
-                                  clientName: video.client_name,
-                                  videoTitle: video.title,
-                                  editorName: editor.name,
-                                  editDeadline: formatDeadline(video.edit_deadline),
-                                })
-                              );
-                              return (
-                                <a
-                                  href={waUrl}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  title={`WhatsApp ping to ${editor.name}`}
-                                  className="p-1.5 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg border border-emerald-200 transition"
-                                >
-                                  <MessageSquare className="w-3.5 h-3.5" />
-                                </a>
-                              );
-                            }
-                            return null;
-                          })()}
-
                           {video.review_token && (
                             <a
                               href={`/review/${video.review_token}`}
