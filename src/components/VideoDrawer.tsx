@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { X, Trash2, ExternalLink, Save, Plus, Building2, Check } from "lucide-react";
+import { X, Trash2, ExternalLink, Save, Plus, Building2, Check, CheckCircle2 } from "lucide-react";
 import { CONTENT_TYPES, VIDEO_STAGES, WEGROW_TEAMS, TEAM_META, type WegrowTeam } from "@/lib/constants";
 import type { ClientItem, StaffMember, VideoItem } from "@/types/portal";
 import type { UserRole, VideoPriority, VideoStage } from "@/lib/db";
@@ -357,6 +357,58 @@ export default function VideoDrawer({
             <X className="w-5 h-5" />
           </button>
         </div>
+
+        {/* INTERNAL REVIEW QUICK ACTION BANNER */}
+        {video && video.stage === "internal_review" && (
+          <div className="mx-6 mt-4 p-4 bg-amber-50/90 border-2 border-amber-300 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-amber-200 text-amber-900 flex items-center justify-center shrink-0">
+                <CheckCircle2 className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-amber-950">
+                  Cut Ready for Internal Approval
+                </p>
+                <p className="text-[11px] text-amber-800">
+                  Rahul has submitted the cut. Review and approve or request revision.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
+              {video.final_link && (
+                <a
+                  href={video.final_link}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-3 py-1.5 text-xs font-bold text-amber-900 bg-white hover:bg-amber-100 border border-amber-300 rounded-xl flex items-center gap-1 shadow-2xs"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" /> Watch Cut
+                </a>
+              )}
+              <button
+                type="button"
+                onClick={async () => {
+                  setSaving(true);
+                  try {
+                    await fetch(`/api/videos/${video.id}`, {
+                      method: "PATCH",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ stage: "client_approval" }),
+                    });
+                    onSaved();
+                    onClose();
+                  } finally {
+                    setSaving(false);
+                  }
+                }}
+                disabled={saving}
+                className="px-4 py-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl flex items-center gap-1.5 shadow-xs cursor-pointer"
+              >
+                <Check className="w-4 h-4" /> Internal Approve
+              </button>
+            </div>
+          </div>
+        )}
 
         <form onSubmit={handleSave} className="flex-1 overflow-y-auto p-6 space-y-5">
           {/* STEP 1: CLIENT SELECTION & CREATION (MANDATORY FIRST STEP) */}

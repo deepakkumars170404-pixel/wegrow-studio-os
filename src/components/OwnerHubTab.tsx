@@ -487,19 +487,32 @@ export default function OwnerHubTab({
 
                       {/* Stage Dropdown */}
                       <td className="py-3.5 px-4" onClick={(e) => e.stopPropagation()}>
-                        <select
-                          value={video.stage}
-                          onChange={(e) =>
-                            onStageChange(video.id, e.target.value as VideoStage)
-                          }
-                          className={`text-xs font-semibold px-2.5 py-1.5 rounded-xl border cursor-pointer focus:outline-none ${stageMeta.badgeClass}`}
-                        >
-                          {VIDEO_STAGES.map((s) => (
-                            <option key={s.key} value={s.key}>
-                              {s.label}
-                            </option>
-                          ))}
-                        </select>
+                        <div className="space-y-1.5 min-w-[130px]">
+                          <select
+                            value={video.stage}
+                            onChange={(e) =>
+                              onStageChange(video.id, e.target.value as VideoStage)
+                            }
+                            className={`w-full text-xs font-semibold px-2.5 py-1.5 rounded-xl border cursor-pointer focus:outline-none ${stageMeta.badgeClass}`}
+                          >
+                            {VIDEO_STAGES.map((s) => (
+                              <option key={s.key} value={s.key}>
+                                {s.label}
+                              </option>
+                            ))}
+                          </select>
+
+                          {video.stage === "internal_review" && (
+                            <button
+                              type="button"
+                              onClick={() => onStageChange(video.id, "client_approval")}
+                              className="w-full px-2.5 py-1.5 text-[11px] font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-2xs flex items-center justify-center gap-1 transition cursor-pointer"
+                              title="Approve Rahul's cut and move to Client Approval"
+                            >
+                              <CheckCircle2 className="w-3.5 h-3.5" /> Internal Approve
+                            </button>
+                          )}
+                        </div>
                       </td>
 
                       {/* Assigned Crew */}
@@ -626,6 +639,18 @@ export default function OwnerHubTab({
                             </a>
                           )}
 
+                          {video.stage === "internal_review" && (
+                            <button
+                              type="button"
+                              onClick={() => onStageChange(video.id, "client_approval")}
+                              className="px-3 py-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-2xs flex items-center gap-1.5 transition cursor-pointer shrink-0"
+                              title="Internal Approve ➔ Move to Client Approval"
+                            >
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              Internal Approve
+                            </button>
+                          )}
+
                           <button
                             onClick={() => onOpenVideo(video)}
                             className="px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition cursor-pointer"
@@ -699,6 +724,18 @@ export default function OwnerHubTab({
                       <div className="text-[11px] text-slate-500">
                         {v.editor_name ? `Editor: ${v.editor_name}` : "Editor: Unassigned"}
                       </div>
+                      {v.stage === "internal_review" && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onStageChange(v.id, "client_approval");
+                          }}
+                          className="w-full mt-2 px-2.5 py-1 text-[11px] font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-2xs flex items-center justify-center gap-1 transition cursor-pointer"
+                        >
+                          <CheckCircle2 className="w-3 h-3" /> Internal Approve
+                        </button>
+                      )}
                     </div>
                   ))}
                   {stageVideos.length === 0 && (

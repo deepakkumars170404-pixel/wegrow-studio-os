@@ -21,6 +21,7 @@ import {
   Copy,
   MessageSquare,
   X,
+  Check,
 } from "lucide-react";
 import {
   formatDeadline,
@@ -75,6 +76,14 @@ export default function StaffQueueTab({
     user.email.toLowerCase().includes("millar");
   const isSkillCampusLead = user.email.toLowerCase().includes("rajkumar");
   const isJobzLead = user.email.toLowerCase().includes("gopinath");
+  const isLeadOrManager =
+    user.role === "manager" ||
+    user.role === "admin" ||
+    user.role === "owner" ||
+    isWriter ||
+    isAiCreator ||
+    isSkillCampusLead ||
+    isJobzLead;
 
   // Filter videos for the current staff member
   const roleFilteredVideos = videos.filter((v) => {
@@ -236,7 +245,7 @@ export default function StaffQueueTab({
         </div>
 
         <div className="flex items-center gap-2">
-          {(isWriter || isAiCreator) && (
+          {isLeadOrManager && (
             <button
               onClick={onNewVideo}
               className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-xl flex items-center gap-1.5 shadow-xs transition cursor-pointer"
@@ -665,8 +674,8 @@ export default function StaffQueueTab({
                     </>
                   )}
 
-                  {/* CONTENT WRITER / TEAM LEAD APPROVAL ACTIONS */}
-                  {(isWriter || isAiCreator) && (
+                  {/* CONTENT WRITER / TEAM LEAD / MANAGER APPROVAL ACTIONS */}
+                  {isLeadOrManager && (
                     <>
                       {video.stage === "script" && (
                         <button
@@ -680,18 +689,20 @@ export default function StaffQueueTab({
                       {video.stage === "internal_review" && (
                         <>
                           <button
-                            onClick={() => onStageChange(video.id, "scheduled")}
-                            className="px-3 py-1.5 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl flex items-center gap-1 shadow-2xs cursor-pointer"
+                            onClick={() => onStageChange(video.id, "client_approval")}
+                            className="px-3.5 py-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl flex items-center gap-1.5 shadow-2xs cursor-pointer transition"
+                            title="Approve cut and advance to Client Approval"
                           >
                             <CheckCircle2 className="w-3.5 h-3.5" />
-                            Approve for Publishing
+                            Internal Approve ➔ Client Review
                           </button>
                           <button
-                            onClick={() => onStageChange(video.id, "client_approval")}
-                            className="px-3 py-1.5 text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-xl border border-indigo-200 flex items-center gap-1 cursor-pointer"
+                            onClick={() => onStageChange(video.id, "scheduled")}
+                            className="px-3 py-1.5 text-xs font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 rounded-xl border border-emerald-300 flex items-center gap-1 cursor-pointer transition"
+                            title="Directly approve and mark ready to post"
                           >
-                            <Send className="w-3.5 h-3.5" />
-                            Client Approval
+                            <Check className="w-3.5 h-3.5 text-emerald-600" />
+                            Direct Approve ➔ Post
                           </button>
                           <button
                             onClick={() => {
@@ -703,10 +714,10 @@ export default function StaffQueueTab({
                               });
                               setLinkInput("");
                             }}
-                            className="px-3 py-1.5 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-xl border border-rose-200 flex items-center gap-1 cursor-pointer"
+                            className="px-3 py-1.5 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-xl border border-rose-200 flex items-center gap-1 cursor-pointer transition"
                           >
                             <RefreshCw className="w-3.5 h-3.5" />
-                            Revision
+                            Request Revision
                           </button>
                         </>
                       )}
