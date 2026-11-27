@@ -139,7 +139,7 @@ export default function PortalApp() {
   if (!authChecked) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center text-slate-300 text-sm">
-        Loading WEGROW Studio OS...
+        Loading WeGrow Production Hub...
       </div>
     );
   }
@@ -260,14 +260,15 @@ export default function PortalApp() {
   return (
     <div className="min-h-screen w-full bg-slate-50 flex flex-col">
       {/* Mobile Top App Bar (shown only on < md screens) */}
-      <div className="md:hidden bg-slate-950 text-white px-4 py-3 flex items-center justify-between border-b border-slate-800 shrink-0 sticky top-0 z-40">
+      <div className="md:hidden bg-slate-950 text-white px-4 py-2.5 flex items-center justify-between border-b border-slate-800 shrink-0 sticky top-0 z-40">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white shadow-sm">
-            <Clapperboard className="w-4 h-4" />
+          <div className="bg-white rounded-lg p-1 flex items-center justify-center shrink-0">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo.jpg" alt="WeGrow Production Hub" className="h-7 w-auto object-contain" />
           </div>
           <div>
-            <h1 className="text-xs font-bold text-white tracking-tight">WEGROW Studio OS</h1>
-            <p className="text-[10px] text-slate-400">Marketing Operations</p>
+            <h1 className="text-xs font-black text-white tracking-tight">WeGrow Production Hub</h1>
+            <p className="text-[10px] text-amber-400 font-semibold tracking-wide uppercase">Marketing Operations</p>
           </div>
         </div>
         <button
@@ -296,22 +297,23 @@ export default function PortalApp() {
         }`}
       >
         <div className="flex flex-col min-h-0 flex-1">
-          <div className="p-5 flex items-center justify-between border-b border-slate-800/80 shrink-0">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-md">
-                <Clapperboard className="w-5 h-5" />
+          <div className="p-4 flex items-center justify-between border-b border-slate-800/80 shrink-0">
+            <div className="flex items-center gap-2.5 w-full">
+              <div className="bg-white rounded-xl p-1.5 flex items-center justify-center shadow-xs shrink-0">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/logo.jpg" alt="WeGrow Production Hub" className="h-8 w-auto object-contain" />
               </div>
-              <div>
-                <h1 className="text-sm font-bold text-white tracking-tight">
-                  WEGROW Studio OS
+              <div className="min-w-0 flex-1">
+                <h1 className="text-xs font-black text-white tracking-tight leading-snug">
+                  WeGrow
                 </h1>
-                <p className="text-[11px] text-slate-400">Marketing Operations</p>
+                <p className="text-[11px] font-bold text-amber-400 tracking-tight leading-none">Production Hub</p>
               </div>
             </div>
             {mobileMenuOpen && (
               <button
                 onClick={() => setMobileMenuOpen(false)}
-                className="md:hidden p-1.5 rounded-lg text-slate-400 hover:text-white"
+                className="md:hidden p-1.5 rounded-lg text-slate-400 hover:text-white shrink-0 ml-1"
               >
                 <X className="w-5 h-5" />
               </button>

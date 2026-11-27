@@ -13,9 +13,13 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "WEGROW Studio OS | Digital Marketing & Video Ops",
+  title: "WeGrow Production Hub | Video & Marketing Operations",
   description:
-    "Internal MNC-grade video production pipeline, client hub, posting calendar, and staff management portal.",
+    "WeGrow Production Hub — Unified video production pipeline, client hub, review portal, and multi-team operations.",
+  icons: {
+    icon: "/logo.jpg",
+    apple: "/logo.jpg",
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

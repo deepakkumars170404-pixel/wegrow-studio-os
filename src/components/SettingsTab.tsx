@@ -155,7 +155,7 @@ export default function SettingsTab() {
         <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/70 space-y-2 text-xs text-slate-700">
           <div className="flex items-center justify-between">
             <span className="font-medium">Active Organization:</span>
-            <span className="font-bold text-indigo-700">WEGROW Digital Marketing</span>
+            <span className="font-bold text-indigo-700">WeGrow Production Hub</span>
           </div>
           <div className="flex items-center justify-between">
             <span className="font-medium">Tenant ID Partition:</span>

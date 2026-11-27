@@ -57,20 +57,21 @@ export default function LoginView({ onSuccess }: LoginViewProps) {
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(79,70,229,0.18),_transparent_45%),radial-gradient(circle_at_bottom_left,_rgba(8,145,178,0.14),_transparent_45%)] pointer-events-none" />
 
       <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl border border-slate-200/80 p-8 relative z-10">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-md shadow-indigo-500/30">
-              <Clapperboard className="w-6 h-6" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold text-slate-900 tracking-tight">
-                WEGROW Studio OS
-              </h1>
-              <p className="text-xs text-slate-500 font-medium">
-                Video Production & Marketing Ops
-              </p>
-            </div>
+        <div className="flex flex-col items-center justify-center mb-6 text-center">
+          <div className="bg-slate-50 border border-slate-100 rounded-2xl p-3 mb-3 shadow-xs">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/logo.jpg"
+              alt="WeGrow Production Hub"
+              className="h-14 w-auto object-contain"
+            />
           </div>
+          <h1 className="text-xl font-black text-slate-900 tracking-tight">
+            WeGrow Production Hub
+          </h1>
+          <p className="text-xs text-slate-500 font-medium mt-1">
+            Video Production & Digital Marketing Operations
+          </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">

@@ -38,7 +38,7 @@ export function createShootDoneAlertMessage({
   editDeadline: string;
   rawLink?: string;
 }): string {
-  return `🎬 *WEGROW STUDIO OS ALERT*\n\nHi ${editorName}!\nCameraman has completed shoot for:\n📌 *Client:* ${clientName}\n🎥 *Video:* ${videoTitle}\n⏰ *Edit Deadline:* ${editDeadline}\n${
+  return `🎬 *WEGROW PRODUCTION HUB ALERT*\n\nHi ${editorName}!\nCameraman has completed shoot for:\n📌 *Client:* ${clientName}\n🎥 *Video:* ${videoTitle}\n⏰ *Edit Deadline:* ${editDeadline}\n${
     rawLink ? `📁 *Raw Footage:* ${rawLink}\n` : ""
   }\nPlease start editing now! 🚀`;
 }

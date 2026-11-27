@@ -256,7 +256,7 @@ async function initSchemaAndSeed(db: Client): Promise<void> {
   `);
   await db.execute({
     sql: "INSERT OR IGNORE INTO organizations (id, name, slug, owner_email) VALUES (?, ?, ?, ?)",
-    args: [1, "WEGROW Studio", "wegrow", "thavabalan@wegrow.in"],
+    args: [1, "WeGrow Production Hub", "wegrow", "thavabalan@wegrow.in"],
   });
 
   // Ensure settings table exists
