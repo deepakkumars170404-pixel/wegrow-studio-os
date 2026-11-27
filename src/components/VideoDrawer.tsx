@@ -144,6 +144,13 @@ export default function VideoDrawer({
         setLiveUrl("");
         setNotes("");
 
+        // Auto-assign default Editor (Rahul) and Cameraman (Pandeeswaran) for smooth workflow
+        const defaultEditor = editors.find((e) => e.name.toLowerCase().includes("rahul")) || editors[0];
+        if (defaultEditor) setEditorId(String(defaultEditor.id));
+
+        const defaultCam = cameramen.find((c) => c.name.toLowerCase().includes("pandeeswaran")) || cameramen[0];
+        if (defaultCam) setCameramanId(String(defaultCam.id));
+
         // Apply initial smart default team assignment
         let defaultTeam: WegrowTeam = "BSchool";
         if (currentUser?.email?.toLowerCase().includes("rajkumar")) {
@@ -287,12 +294,18 @@ export default function VideoDrawer({
 
     setSaving(true);
     try {
+      // If raw footage is already set (SSD / SD Card / Drive link) and stage is still "script", advance to "editing" so editor sees it immediately
+      const computedStage = (stage === "script" && rawLink && rawLink.trim()) ? "editing" : stage;
+      const computedNotes = (stage === "script" && rawLink && rawLink.trim() && !notes)
+        ? `🎬 [Raw Footage Handover]: ${rawLink.trim()} - Ready for editing`
+        : notes;
+
       const payload = {
         client_id: finalClientId,
         title: title.trim(),
         team,
         content_type: contentType,
-        stage,
+        stage: computedStage,
         priority,
         assigned_editor_id: editorId ? Number(editorId) : null,
         assigned_writer_id: writerId ? Number(writerId) : null,
@@ -302,7 +315,7 @@ export default function VideoDrawer({
         raw_link: rawLink,
         final_link: finalLink,
         live_url: liveUrl,
-        notes,
+        notes: computedNotes,
       };
 
       const res = await fetch(video ? `/api/videos/${video.id}` : "/api/videos", {
@@ -775,21 +788,36 @@ export default function VideoDrawer({
                 <span className="text-[10px] text-slate-500 font-medium">Quick presets:</span>
                 <button
                   type="button"
-                  onClick={() => setRawLink("💾 Hard Disk / SSD Handover")}
+                  onClick={() => {
+                    setRawLink("💾 Hard Disk / SSD Handover");
+                    if (stage === "script" || stage === "shoot_done" || stage === "raw_uploaded") {
+                      setStage("editing");
+                    }
+                  }}
                   className="px-2 py-0.5 text-[11px] font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg cursor-pointer"
                 >
                   💾 Hard Disk / SSD
                 </button>
                 <button
                   type="button"
-                  onClick={() => setRawLink("💳 SD Card Handover")}
+                  onClick={() => {
+                    setRawLink("💳 SD Card Handover");
+                    if (stage === "script" || stage === "shoot_done" || stage === "raw_uploaded") {
+                      setStage("editing");
+                    }
+                  }}
                   className="px-2 py-0.5 text-[11px] font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg cursor-pointer"
                 >
                   💳 SD Card
                 </button>
                 <button
                   type="button"
-                  onClick={() => setRawLink("💻 Studio Local PC")}
+                  onClick={() => {
+                    setRawLink("💻 Studio Local PC");
+                    if (stage === "script" || stage === "shoot_done" || stage === "raw_uploaded") {
+                      setStage("editing");
+                    }
+                  }}
                   className="px-2 py-0.5 text-[11px] font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg cursor-pointer"
                 >
                   💻 Studio Local PC

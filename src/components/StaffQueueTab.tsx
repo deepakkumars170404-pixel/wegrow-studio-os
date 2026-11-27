@@ -97,8 +97,10 @@ export default function StaffQueueTab({
   // Filter videos for the current staff member
   const roleFilteredVideos = videos.filter((v) => {
     if (isEditor) {
-      // Editor must only see assigned videos that are past the script stage
-      return v.assigned_editor_id === user.id && v.stage !== "script";
+      // Editor sees assigned videos (or unassigned editing tasks) that are past script stage OR have raw footage ready
+      const isAssignedToMeOrOpen = v.assigned_editor_id === user.id || !v.assigned_editor_id;
+      const isReadyForEditing = v.stage !== "script" || Boolean(v.raw_link && v.raw_link.trim());
+      return isAssignedToMeOrOpen && isReadyForEditing;
     }
     if (isCameraman) {
       return v.assigned_cameraman_id === user.id;
@@ -153,12 +155,12 @@ export default function StaffQueueTab({
     }
   }, [isEditor, revisionVideos, dismissedAlertIds, activeRevisionAlert]);
 
-  // Videos assigned to Rahul where Pandeeswaran marked Shoot & Raw Done
+  // Videos assigned to Rahul where Pandeeswaran marked Shoot & Raw Done OR raw footage is ready (SSD/SD Card/Drive)
   const shootDoneAlertVideos = teamFilteredVideos.filter(
     (v) =>
       v.stage === "editing" &&
-      v.notes &&
-      v.notes.includes("Shoot & Raw Footage Completed")
+      ((v.notes && v.notes.includes("Shoot & Raw Footage Completed")) ||
+        (v.raw_link && !v.raw_link.startsWith("http")))
   );
 
   // Trigger popup alert for Rahul when new raw footage arrives from Pandeeswaran
@@ -606,8 +608,9 @@ export default function StaffQueueTab({
                         Raw Footage
                       </a>
                     ) : (
-                      <span className="font-semibold text-sky-700 bg-sky-50 border border-sky-200 px-2 py-0.5 rounded-lg flex items-center gap-1 text-[11px]">
-                        💾 {video.raw_link}
+                      <span className="font-bold text-amber-900 bg-amber-50 border border-amber-300 px-2.5 py-1 rounded-xl flex items-center gap-1.5 text-xs shadow-2xs">
+                        <span>📁 Footage Location:</span>
+                        <span className="text-amber-950 font-black">{video.raw_link}</span>
                       </span>
                     )
                   ) : (
@@ -701,7 +704,9 @@ export default function StaffQueueTab({
                   {/* EDITOR ACTIONS */}
                   {isEditor && (
                     <>
-                      {(video.stage === "shoot_done" || video.stage === "raw_uploaded") && (
+                      {(video.stage === "shoot_done" ||
+                        video.stage === "raw_uploaded" ||
+                        (video.stage === "script" && video.raw_link)) && (
                         <button
                           onClick={() => onStageChange(video.id, "editing")}
                           className="px-3.5 py-1.5 text-xs font-semibold text-white bg-amber-600 hover:bg-amber-700 rounded-xl flex items-center gap-1.5 shadow-xs cursor-pointer"
