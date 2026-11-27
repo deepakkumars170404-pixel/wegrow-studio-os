@@ -580,14 +580,23 @@ export default function OwnerHubTab({
                       <td className="py-3.5 px-4" onClick={(e) => e.stopPropagation()}>
                         <div className="flex flex-col gap-1 text-[11px]">
                           {video.raw_link ? (
-                            <a
-                              href={video.raw_link}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="text-sky-600 hover:text-sky-800 hover:underline flex items-center gap-1 font-semibold"
-                            >
-                              Raw Footage <ExternalLink className="w-3 h-3" />
-                            </a>
+                            video.raw_link.startsWith("http") ? (
+                              <a
+                                href={video.raw_link}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-sky-600 hover:text-sky-800 hover:underline flex items-center gap-1 font-semibold"
+                              >
+                                Raw Footage <ExternalLink className="w-3 h-3" />
+                              </a>
+                            ) : (
+                              <span
+                                className="text-sky-700 bg-sky-50 border border-sky-200 px-1.5 py-0.5 rounded text-[10px] font-semibold max-w-[130px] truncate"
+                                title={video.raw_link}
+                              >
+                                {video.raw_link}
+                              </span>
+                            )
                           ) : (
                             <span className="text-slate-300">No Raw</span>
                           )}

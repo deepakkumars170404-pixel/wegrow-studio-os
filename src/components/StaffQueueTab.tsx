@@ -66,6 +66,15 @@ export default function StaffQueueTab({
   // Revision popup alert state for Rahul (editor)
   const [activeRevisionAlert, setActiveRevisionAlert] = useState<VideoItem | null>(null);
   const [dismissedAlertIds, setDismissedAlertIds] = useState<number[]>([]);
+  // Shoot & Raw Done alert state for Rahul (editor)
+  const [activeShootAlert, setActiveShootAlert] = useState<VideoItem | null>(null);
+  const [dismissedShootIds, setDismissedShootIds] = useState<number[]>([]);
+  const [toastMessage, setToastMessage] = useState("");
+
+  function showToast(msg: string) {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(""), 4000);
+  }
 
   const isEditor = user.role === "editor";
   const isCameraman = user.role === "cameraman";
@@ -144,6 +153,46 @@ export default function StaffQueueTab({
     }
   }, [isEditor, revisionVideos, dismissedAlertIds, activeRevisionAlert]);
 
+  // Videos assigned to Rahul where Pandeeswaran marked Shoot & Raw Done
+  const shootDoneAlertVideos = teamFilteredVideos.filter(
+    (v) =>
+      v.stage === "editing" &&
+      v.notes &&
+      v.notes.includes("Shoot & Raw Footage Completed")
+  );
+
+  // Trigger popup alert for Rahul when new raw footage arrives from Pandeeswaran
+  useEffect(() => {
+    if (isEditor && shootDoneAlertVideos.length > 0) {
+      const nextShoot = shootDoneAlertVideos.find((v) => !dismissedShootIds.includes(v.id));
+      if (nextShoot && (!activeShootAlert || activeShootAlert.id !== nextShoot.id)) {
+        setActiveShootAlert(nextShoot);
+      }
+    }
+  }, [isEditor, shootDoneAlertVideos, dismissedShootIds, activeShootAlert]);
+
+  function handleShootAndRawDone(video: VideoItem) {
+    const nowStr = new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" });
+    const rawAlertMsg = `🎬 [Pandeeswaran on ${nowStr}]: Shoot & Raw Footage Completed! Handed over to Rahul for editing.`;
+    const updatedNotes = video.notes ? `${rawAlertMsg}\n${video.notes}` : rawAlertMsg;
+    const defaultRaw = video.raw_link || "Raw Footage Ready (Handed over directly / SSD)";
+
+    // 0ms instant optimistic update
+    onStageChange(video.id, "editing");
+    showToast(`✓ Shoot & Raw Done for "${video.title}"! Task sent directly to Rahul.`);
+
+    // Background DB sync
+    fetch(`/api/videos/${video.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        stage: "editing",
+        raw_link: defaultRaw,
+        notes: updatedNotes,
+      }),
+    }).catch((err) => console.error("Shoot & raw done update error:", err));
+  }
+
   const displayedVideos = teamFilteredVideos.filter((v) => {
     if (filter === "active") return v.stage !== "posted";
     if (filter === "completed") return v.stage === "posted";
@@ -165,8 +214,13 @@ export default function StaffQueueTab({
           payload.notes = `🎬 [Revised Cut Submitted by Rahul on ${nowStr}]\n${existing}`.trim();
         }
       } else if (promptVideo.action === "submit_raw") {
-        payload.raw_link = linkInput.trim();
-        payload.stage = "raw_uploaded";
+        const val = linkInput.trim() || "Raw Footage Ready (Handed over directly / SSD)";
+        const nowStr = new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" });
+        payload.raw_link = val;
+        payload.stage = "editing";
+        payload.notes = `🎬 [Pandeeswaran on ${nowStr}]: Shoot & Raw Footage Completed! Handed over to Rahul for editing.\n${promptVideo.existingNotes || ""}`.trim();
+        onStageChange(promptVideo.id, "editing");
+        showToast(`✓ Shoot & Raw Done! Task sent directly to Rahul.`);
       } else if (promptVideo.action === "submit_live") {
         payload.live_url = linkInput.trim();
         payload.stage = "posted";
@@ -219,6 +273,14 @@ export default function StaffQueueTab({
 
   return (
     <div className="space-y-5 max-w-5xl mx-auto">
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed top-5 right-5 z-50 bg-emerald-700 text-white text-xs font-bold px-4 py-3 rounded-2xl shadow-xl flex items-center gap-2 animate-bounce">
+          <CheckCircle2 className="w-4 h-4 text-emerald-200" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
+
       {/* Role Header Banner */}
       <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3.5">
@@ -356,6 +418,29 @@ export default function StaffQueueTab({
           </div>
           <span className="text-xs font-bold bg-white text-emerald-900 px-3 py-1 rounded-xl shadow-2xs">
             {clientApprovedVideos.map((v) => v.client_name).slice(0, 3).join(", ")}
+          </span>
+        </div>
+      )}
+
+      {/* Editor Alert: New Shoot & Raw Ready from Pandeeswaran */}
+      {isEditor && shootDoneAlertVideos.length > 0 && (
+        <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-700 text-white rounded-2xl p-4 shadow-sm flex items-center justify-between gap-3 flex-wrap animate-pulse">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">🎬</span>
+            <div>
+              <h4 className="text-sm font-bold flex items-center gap-2">
+                <span>{shootDoneAlertVideos.length} New Raw Footage Ready from Pandeeswaran!</span>
+                <span className="text-[10px] uppercase tracking-wider bg-white/20 px-2 py-0.5 rounded-full font-semibold">
+                  Ready for Editing
+                </span>
+              </h4>
+              <p className="text-xs text-blue-100 mt-0.5">
+                Pandeeswaran completed shoot & raw handover. You can start cutting the video now!
+              </p>
+            </div>
+          </div>
+          <span className="text-xs font-bold bg-white text-indigo-900 px-3 py-1.5 rounded-xl shadow-2xs">
+            {shootDoneAlertVideos.map((v) => v.title).slice(0, 2).join(", ")}
           </span>
         </div>
       )}
@@ -510,15 +595,21 @@ export default function StaffQueueTab({
                 {/* Links */}
                 <div className="flex items-center gap-3 text-xs flex-wrap">
                   {video.raw_link ? (
-                    <a
-                      href={video.raw_link}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="font-semibold text-sky-600 hover:text-sky-800 flex items-center gap-1 hover:underline"
-                    >
-                      <ExternalLink className="w-3.5 h-3.5" />
-                      Raw Footage
-                    </a>
+                    video.raw_link.startsWith("http") ? (
+                      <a
+                        href={video.raw_link}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="font-semibold text-sky-600 hover:text-sky-800 flex items-center gap-1 hover:underline"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        Raw Footage
+                      </a>
+                    ) : (
+                      <span className="font-semibold text-sky-700 bg-sky-50 border border-sky-200 px-2 py-0.5 rounded-lg flex items-center gap-1 text-[11px]">
+                        💾 {video.raw_link}
+                      </span>
+                    )
                   ) : (
                     <span className="text-slate-400">No raw link</span>
                   )}
@@ -580,32 +671,31 @@ export default function StaffQueueTab({
                 <div className="flex items-center gap-2 flex-wrap">
                   {/* CAMERAMAN ACTIONS */}
                   {isCameraman && (
-                    <>
-                      {video.stage === "script" ? (
-                        <button
-                          onClick={() => onStageChange(video.id, "shoot_done")}
-                          className="px-3.5 py-1.5 text-xs font-semibold text-white bg-violet-600 hover:bg-violet-700 rounded-xl flex items-center gap-1.5 shadow-xs cursor-pointer"
-                        >
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                          Mark Shoot Done
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => {
-                            setPromptVideo({
-                              id: video.id,
-                              action: "submit_raw",
-                              title: video.title,
-                            });
-                            setLinkInput(video.raw_link || "");
-                          }}
-                          className="px-3 py-1.5 text-xs font-semibold text-sky-700 bg-sky-50 hover:bg-sky-100 rounded-xl flex items-center gap-1.5 border border-sky-200 cursor-pointer"
-                        >
-                          <Upload className="w-3.5 h-3.5" />
-                          {video.raw_link ? "Update Raw Link" : "Add Raw Link"}
-                        </button>
-                      )}
-                    </>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <button
+                        onClick={() => handleShootAndRawDone(video)}
+                        className="px-4 py-2 text-xs font-black text-white bg-emerald-600 hover:bg-emerald-700 active:scale-95 rounded-xl flex items-center gap-2 shadow-sm transition cursor-pointer"
+                        title="Mark shoot complete and notify Rahul with raw footage handover"
+                      >
+                        <CheckCircle2 className="w-4 h-4 text-emerald-200" />
+                        Shoot & Raw Done
+                      </button>
+                      <button
+                        onClick={() => {
+                          setPromptVideo({
+                            id: video.id,
+                            action: "submit_raw",
+                            title: video.title,
+                            existingNotes: video.notes || "",
+                          });
+                          setLinkInput(video.raw_link || "");
+                        }}
+                        className="px-3 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-xl flex items-center gap-1.5 transition cursor-pointer"
+                      >
+                        <Upload className="w-3.5 h-3.5 text-slate-500" />
+                        {video.raw_link ? "Update Raw Link / Storage" : "Attach Drive Link (Optional)"}
+                      </button>
+                    </div>
                   )}
 
                   {/* EDITOR ACTIONS */}
@@ -816,7 +906,7 @@ export default function StaffQueueTab({
                   {promptVideo.action === "submit_cut"
                     ? "Google Drive Final Cut Link *"
                     : promptVideo.action === "submit_raw"
-                    ? "Google Drive Raw Footage Link *"
+                    ? "Raw Footage Drive Link or Storage Location (Optional)"
                     : promptVideo.action === "submit_live"
                     ? "Live Post URL (Instagram Reel / YouTube Short) *"
                     : "Revision Feedback & Changes Required *"}
@@ -830,6 +920,40 @@ export default function StaffQueueTab({
                     placeholder="Specify exact changes needed: e.g., trim intro hook, fix typography, adjust music volume..."
                     className="w-full px-3.5 py-2 text-xs border border-slate-300 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
+                ) : promptVideo.action === "submit_raw" ? (
+                  <div className="space-y-2">
+                    <input
+                      type="text"
+                      value={linkInput}
+                      onChange={(e) => setLinkInput(e.target.value)}
+                      placeholder="Paste Drive link, or select handover location below..."
+                      className="w-full px-3.5 py-2 text-sm border border-slate-300 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-[10px] text-slate-500 font-medium">Quick presets:</span>
+                      <button
+                        type="button"
+                        onClick={() => setLinkInput("💾 Hard Disk / SSD Handover")}
+                        className="px-2 py-0.5 text-[11px] font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg cursor-pointer"
+                      >
+                        💾 Hard Disk / SSD
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setLinkInput("💳 SD Card Handover")}
+                        className="px-2 py-0.5 text-[11px] font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg cursor-pointer"
+                      >
+                        💳 SD Card
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setLinkInput("💻 Studio Local PC")}
+                        className="px-2 py-0.5 text-[11px] font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg cursor-pointer"
+                      >
+                        💻 Studio Local PC
+                      </button>
+                    </div>
+                  </div>
                 ) : (
                   <input
                     type="url"
@@ -985,6 +1109,118 @@ export default function StaffQueueTab({
               >
                 <Upload className="w-3.5 h-3.5" />
                 Submit Revised Cut Link
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Rahul New Shoot & Raw Ready Alert Popup Modal */}
+      {isEditor && activeShootAlert && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-xs p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl w-full max-w-lg p-6 shadow-2xl border-2 border-emerald-300 space-y-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-100 border border-emerald-200 flex items-center justify-center text-emerald-600 shrink-0 text-2xl shadow-xs">
+                  🎬
+                </div>
+                <div>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-100/80 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                      Shoot & Raw Ready
+                    </span>
+                    <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md">
+                      {activeShootAlert.team}
+                    </span>
+                  </div>
+                  <h3 className="text-base font-extrabold text-slate-900 mt-1">
+                    New Footage from Pandeeswaran!
+                  </h3>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setDismissedShootIds((prev) => [...prev, activeShootAlert.id]);
+                  setActiveShootAlert(null);
+                }}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200/80 space-y-1">
+              <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                Video Details:
+              </p>
+              <p className="text-sm font-bold text-slate-900 leading-snug">
+                {activeShootAlert.title}
+              </p>
+              <p className="text-xs text-indigo-700 font-semibold">
+                Client: {activeShootAlert.client_name} • Format: {activeShootAlert.content_type}
+              </p>
+            </div>
+
+            {/* Shoot Handover Details Box */}
+            <div className="bg-emerald-50/90 border-2 border-emerald-200 rounded-2xl p-4 space-y-1.5">
+              <div className="flex items-center gap-1.5 text-emerald-900 text-xs font-bold">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>Cameraman Handover Status:</span>
+              </div>
+              <p className="text-xs text-emerald-950 font-medium whitespace-pre-wrap leading-relaxed bg-white/80 p-3 rounded-xl border border-emerald-100">
+                {activeShootAlert.notes
+                  ?.split("\n")
+                  .find((line) => line.includes("Shoot & Raw Footage Completed")) ||
+                  "Shoot & Raw footage completed by Pandeeswaran and handed over for editing."}
+              </p>
+            </div>
+
+            {activeShootAlert.raw_link && (
+              <div className="text-xs flex items-center justify-between p-2.5 bg-slate-100 rounded-xl">
+                <span className="text-slate-500 font-medium">Raw Footage / Storage:</span>
+                {activeShootAlert.raw_link.startsWith("http") ? (
+                  <a
+                    href={activeShootAlert.raw_link}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 hover:underline"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    Open Google Drive Raw Footage
+                  </a>
+                ) : (
+                  <span className="font-bold text-slate-800 bg-white px-2 py-1 rounded border border-slate-200">
+                    💾 {activeShootAlert.raw_link}
+                  </span>
+                )}
+              </div>
+            )}
+
+            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => {
+                  setDismissedShootIds((prev) => [...prev, activeShootAlert.id]);
+                  setActiveShootAlert(null);
+                }}
+                className="px-4 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl cursor-pointer"
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const targetVideo = activeShootAlert;
+                  setDismissedShootIds((prev) => [...prev, targetVideo.id]);
+                  setActiveShootAlert(null);
+                  onStageChange(targetVideo.id, "editing");
+                  showToast(`Started editing on "${targetVideo.title}"!`);
+                }}
+                className="px-4 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-sm flex items-center gap-1.5 cursor-pointer"
+              >
+                <Play className="w-3.5 h-3.5 text-white" />
+                Got it, Start Editing Now
               </button>
             </div>
           </div>
