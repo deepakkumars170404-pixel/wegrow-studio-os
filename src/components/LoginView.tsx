@@ -58,18 +58,15 @@ export default function LoginView({ onSuccess }: LoginViewProps) {
 
       <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl border border-slate-200/80 p-8 relative z-10">
         <div className="flex flex-col items-center justify-center mb-6 text-center">
-          <div className="bg-slate-50 border border-slate-100 rounded-2xl p-3 mb-3 shadow-xs">
+          <div className="bg-white border border-slate-200/90 rounded-2xl py-3 px-5 mb-3 shadow-sm w-full max-w-[280px] flex items-center justify-center">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="/logo.jpg"
+              src="/logo.png"
               alt="WeGrow Production Hub"
-              className="h-14 w-auto object-contain"
+              className="w-full h-16 object-contain block"
             />
           </div>
-          <h1 className="text-xl font-black text-slate-900 tracking-tight">
-            WeGrow Production Hub
-          </h1>
-          <p className="text-xs text-slate-500 font-medium mt-1">
+          <p className="text-xs text-slate-500 font-semibold tracking-wide mt-1">
             Video Production & Digital Marketing Operations
           </p>
         </div>

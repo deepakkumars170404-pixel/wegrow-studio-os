@@ -165,23 +165,15 @@ export default function ClientReviewPage({
       <div className="max-w-2xl mx-auto w-full space-y-6">
         {/* Brand Header */}
         <div className="flex items-center justify-between border-b border-slate-800 pb-4">
-          <div className="flex items-center gap-3">
-            <div className="bg-white rounded-xl p-1.5 shadow-xs">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/logo.jpg"
-                alt="WeGrow Production Hub"
-                className="h-8 w-auto object-contain"
-              />
-            </div>
-            <div>
-              <h1 className="text-sm font-black text-white tracking-tight">
-                WeGrow Production Hub
-              </h1>
-              <p className="text-xs text-slate-400">Client Approval Portal</p>
-            </div>
+          <div className="bg-white rounded-2xl py-2 px-4 shadow-sm flex items-center justify-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/logo.png"
+              alt="WeGrow Production Hub"
+              className="h-10 w-auto object-contain block"
+            />
           </div>
-          <span className="text-xs px-3 py-1 bg-slate-800 border border-slate-700 rounded-full text-slate-300 font-semibold">
+          <span className="text-xs px-3.5 py-1.5 bg-slate-800 border border-slate-700 rounded-full text-slate-200 font-semibold">
             {video.clientName}
           </span>
         </div>

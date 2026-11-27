@@ -17,8 +17,8 @@ export const metadata: Metadata = {
   description:
     "WeGrow Production Hub — Unified video production pipeline, client hub, review portal, and multi-team operations.",
   icons: {
-    icon: "/logo.jpg",
-    apple: "/logo.jpg",
+    icon: "/logo.png",
+    apple: "/logo.png",
   },
 };
 
